@@ -4,7 +4,8 @@ import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import MediaCard from './MediaCard';
-import { Search, SlidersHorizontal, Image as ImageIcon, Video,
+import {
+  Search, SlidersHorizontal, Image as ImageIcon, Video,
   Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft, Download,
 } from 'lucide-react';
 
@@ -48,9 +49,9 @@ export default function Gallery({
   onBack,
   districtName = 'Bandarban',
 }) {
-  const [search, setSearch]           = useState('');
-  const [typeFilter, setType]         = useState('all'); // 'all' | 'photos' | 'videos'
-  const [sortBy, setSort]             = useState('default');
+  const [search, setSearch] = useState('');
+  const [typeFilter, setType] = useState('all'); // 'all' | 'photos' | 'videos'
+  const [sortBy, setSort] = useState('default');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
 
   const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
@@ -83,7 +84,7 @@ export default function Gallery({
   const slides = useMemo(() => {
     return filtered.map((file) => {
       const isVideoFile = file.isVideo || (file.mimeType && file.mimeType.includes('video'));
-      const highResUrl  = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+      const highResUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
 
       if (isVideoFile) {
         return {
@@ -200,8 +201,8 @@ export default function Gallery({
                 className="bg-transparent text-slate-300 focus:outline-none cursor-pointer"
               >
                 <option value="default" className="bg-slate-900">Timeline Order</option>
-                <option value="name"    className="bg-slate-900">File Name</option>
-                <option value="type"    className="bg-slate-900">Type (Videos First)</option>
+                <option value="name" className="bg-slate-900">File Name</option>
+                <option value="type" className="bg-slate-900">Type (Videos First)</option>
               </select>
             </div>
           </div>
@@ -237,8 +238,8 @@ export default function Gallery({
               className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-slate-800 bg-slate-900 text-slate-400 hover:border-emerald-500/60 hover:text-emerald-400 transition-colors cursor-pointer"
             >
               {allFilteredSelected
-                ? <><Square      className="w-3.5 h-3.5" /> Deselect All</>
-                : <><CheckCheck  className="w-3.5 h-3.5" /> Select All Visible ({filtered.length})</>
+                ? <><Square className="w-3.5 h-3.5" /> Deselect All</>
+                : <><CheckCheck className="w-3.5 h-3.5" /> Select All Visible ({filtered.length})</>
               }
             </button>
           )}
