@@ -1,16 +1,14 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Download, Package2, X, CheckCheck,
+  Download, X, CheckCheck,
   Loader2, AlertCircle,
 } from 'lucide-react';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 
 export default function FloatingBar({ selectedFiles, onClearSelection }) {
-  const [dlState, setDlState] = React.useState('idle'); // 'idle' | 'fetching' | 'zipping' | 'done' | 'error'
-  const [progress, setProgress]   = React.useState(0);   // 0-100
-  const [errorMsg, setErrorMsg]   = React.useState('');
+  const [dlState, setDlState] = React.useState('idle'); // 'idle' | 'fetching' | 'done' | 'error'
+  const [progress, setProgress] = React.useState(0);   // 0-100
+  const [errorMsg, setErrorMsg] = React.useState('');
 
   const count = selectedFiles.length;
 
@@ -21,43 +19,42 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
     setProgress(0);
     setErrorMsg('');
 
-    const zip     = new JSZip();
-    const folder  = zip.folder('Bandarban_Diaries_Selection');
-    const errors  = [];
+    const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
+    const errors = [];
 
     try {
-      // ── Phase 1: Fetch blobs for every selected file ─────────────────────
+      // ── Fetch each file and trigger a native browser download ─────────────
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         try {
           /**
-           * We use `export=download` here to guarantee the user gets the
-           * exact, original-quality, full-resolution file — not a resized
-           * Drive view copy.
+           * Use the official Drive API v3 `alt=media` endpoint to fetch the
+           * raw file blob directly — no zip, no proxy, no redirect chain.
            */
-          const response = await fetch(file.downloadUrl, { mode: 'cors' });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) throw new Error(`Failed to fetch file ${file.id}`);
           const blob = await response.blob();
-          folder.file(file.name, blob);
+
+          // Create a temporary object URL and trigger a native download
+          const objectUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = objectUrl;
+          a.download = file.name; // preserves original filename + extension
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(objectUrl);
+
+          // Small delay between downloads so the browser doesn't block the queue
+          await new Promise(r => setTimeout(r, 500));
         } catch (err) {
           console.warn(`Skipped ${file.name}:`, err.message);
           errors.push(file.name);
         }
 
-        setProgress(Math.round(((i + 1) / selectedFiles.length) * 70));
+        setProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
       }
-
-      // ── Phase 2: Generate zip ─────────────────────────────────────────────
-      setDlState('zipping');
-      setProgress(72);
-
-      const zipBlob = await zip.generateAsync(
-        { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } },
-        (meta) => setProgress(72 + Math.round(meta.percent * 0.28))
-      );
-
-      setProgress(100);
-      saveAs(zipBlob, 'Bandarban_Diaries_Selection.zip');
 
       setDlState('done');
       setTimeout(() => setDlState('idle'), 3000);
@@ -73,21 +70,19 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
 
   const buttonLabel = () => {
     switch (dlState) {
-      case 'fetching': return `Fetching files… ${progress}%`;
-      case 'zipping':  return `Zipping… ${progress}%`;
-      case 'done':     return 'Downloaded!';
-      case 'error':    return 'Failed — Retry?';
-      default:         return `Download ${count} file${count !== 1 ? 's' : ''} (High-Res)`;
+      case 'fetching': return `Downloading… ${progress}%`;
+      case 'done': return 'Downloaded!';
+      case 'error': return 'Failed — Retry?';
+      default: return `Download ${count} file${count !== 1 ? 's' : ''} (High-Res)`;
     }
   };
 
   const ButtonIcon = () => {
     switch (dlState) {
-      case 'fetching':
-      case 'zipping':  return <Loader2    className="w-4 h-4 animate-spin" />;
-      case 'done':     return <CheckCheck className="w-4 h-4" />;
-      case 'error':    return <AlertCircle className="w-4 h-4" />;
-      default:         return <Package2   className="w-4 h-4" />;
+      case 'fetching': return <Loader2 className="w-4 h-4 animate-spin" />;
+      case 'done': return <CheckCheck className="w-4 h-4" />;
+      case 'error': return <AlertCircle className="w-4 h-4" />;
+      default: return <Download className="w-4 h-4" />;
     }
   };
 
@@ -97,8 +92,8 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
         <motion.div
           key="floating-bar"
           initial={{ y: 80, opacity: 0 }}
-          animate={{ y: 0,  opacity: 1 }}
-          exit={{   y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
           className="
             fixed bottom-6 left-1/2 -translate-x-1/2
@@ -122,7 +117,7 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
           </div>
 
           {/* Progress bar (visible while downloading) */}
-          {(dlState === 'fetching' || dlState === 'zipping') && (
+          {dlState === 'fetching' && (
             <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl overflow-hidden bg-slate-800">
               <motion.div
                 className="h-full bg-emerald-500 rounded-b-2xl"
