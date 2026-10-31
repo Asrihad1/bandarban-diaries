@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import HomeDashboard from './components/HomeDashboard';
 import Hero          from './components/Hero';
 import Gallery       from './components/Gallery';
-import Lightbox      from './components/Lightbox';
 import FloatingBar   from './components/FloatingBar';
 import { fetchAllDriveMedia } from './services/driveService';
 
@@ -42,13 +41,6 @@ export default function App() {
 
   // ── Selection state (photos + videos) ───────────────────────────────────────
   const [selectedFiles, setSelectedFiles] = useState([]);
-
-  // ── Lightbox state (photos only — videos play inline) ───────────────────────
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [lightboxOpen,  setLightboxOpen]  = useState(false);
-
-  // Only photos go into the lightbox navigation list
-  const photos = media.filter((m) => m.isImage);
 
   // ── Load Drive media for a given folder ──────────────────────────────────────
   const loadMedia = useCallback(async (folderId) => {
@@ -129,22 +121,6 @@ export default function App() {
     setSelectedFiles([]);
   }, []);
 
-  // ── Lightbox handlers ────────────────────────────────────────────────────────
-  const handleOpenLightbox = useCallback((photoIndex) => {
-    setLightboxIndex(photoIndex);
-    setLightboxOpen(true);
-  }, []);
-
-  const handleCloseLightbox = useCallback(() => setLightboxOpen(false), []);
-
-  const handlePrev = useCallback(() =>
-    setLightboxIndex((i) => (i > 0 ? i - 1 : photos.length - 1)),
-  [photos.length]);
-
-  const handleNext = useCallback(() =>
-    setLightboxIndex((i) => (i < photos.length - 1 ? i + 1 : 0)),
-  [photos.length]);
-
   // ── Scroll helper ────────────────────────────────────────────────────────────
   const scrollToGallery = () =>
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' });
@@ -177,21 +153,10 @@ export default function App() {
         error={error}
         selectedFiles={selectedFiles}
         onToggleSelect={handleToggleSelect}
-        onOpenLightbox={handleOpenLightbox}
         onRetry={() => loadMedia(activeFolderId)}
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
         onBack={handleBackToHome}
-      />
-
-      {/* Lightbox — photos only; videos play inline via iframes */}
-      <Lightbox
-        images={photos}
-        currentIndex={lightboxIndex}
-        isOpen={lightboxOpen}
-        onClose={handleCloseLightbox}
-        onPrev={handlePrev}
-        onNext={handleNext}
       />
 
       {/* Floating action bar — appears when ≥1 file is selected */}

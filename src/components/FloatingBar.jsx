@@ -44,13 +44,26 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          window.URL.revokeObjectURL(objectUrl);
+          
+          // Delay revoking URL so browser has time to finish saving the blob
+          setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
 
           // Small delay between downloads so the browser doesn't block the queue
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(r => setTimeout(r, 600));
         } catch (err) {
-          console.warn(`Skipped ${file.name}:`, err.message);
-          errors.push(file.name);
+          console.warn(`Direct blob fetch failed for ${file.name}, trying downloadUrl fallback:`, err.message);
+          try {
+            const fallbackLink = file.downloadUrl || `https://drive.google.com/uc?export=download&id=${file.id}`;
+            const a = document.createElement('a');
+            a.href = fallbackLink;
+            a.download = file.name;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } catch (fallbackErr) {
+            errors.push(file.name);
+          }
         }
 
         setProgress(Math.round(((i + 1) / selectedFiles.length) * 100));

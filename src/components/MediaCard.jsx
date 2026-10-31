@@ -135,10 +135,9 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
 
 // ─── Video Card ───────────────────────────────────────────────────────────────
 
-function VideoCard({ file, isSelected, onToggleSelect }) {
+function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
   const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
   const initialSrc = file.imgSrc || file.thumbnailLink || (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : null);
-  const [isPlaying, setIsPlaying] = React.useState(false);
   const [src, setSrc] = React.useState(initialSrc);
 
   React.useEffect(() => {
@@ -149,7 +148,7 @@ function VideoCard({ file, isSelected, onToggleSelect }) {
     <div
       className={`
         relative group overflow-hidden rounded-2xl bg-slate-800
-        border-2 transition-all duration-300 shadow-md
+        border-2 transition-all duration-300 shadow-md cursor-pointer
         ${isSelected
           ? 'border-emerald-500 shadow-emerald-500/30 shadow-xl'
           : 'border-slate-800 hover:border-slate-600'
@@ -164,56 +163,56 @@ function VideoCard({ file, isSelected, onToggleSelect }) {
         <span>VIDEO</span>
       </div>
 
-      <div className="relative w-full h-48 sm:h-56 bg-slate-900 z-10 overflow-hidden">
-        {isPlaying ? (
-          <iframe
-            src={`${file.previewUrl}?autoplay=1`}
-            title={file.name}
-            width="100%"
-            height="100%"
-            allow="autoplay"
-            className="absolute inset-0 w-full h-full border-none"
+      <div
+        onClick={onOpenLightbox}
+        className="relative w-full h-48 sm:h-56 bg-slate-900 z-10 overflow-hidden cursor-pointer group/video"
+      >
+        {src ? (
+          <img
+            src={src}
+            alt={file.name}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => {
+              const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+              if (src !== directAltUrl) setSrc(directAltUrl);
+            }}
+            className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover/video:scale-105"
           />
         ) : (
-          <div
-            onClick={() => setIsPlaying(true)}
-            className="relative w-full h-full cursor-pointer group/video"
-          >
-            {src ? (
-              <img
-                src={src}
-                alt={file.name}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                onError={() => {
-                  const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
-                  if (src !== directAltUrl) setSrc(directAltUrl);
-                }}
-                className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover/video:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                <Play className="w-8 h-8 text-slate-600" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center group-hover/video:bg-slate-950/20 transition-colors">
-              <div className="w-11 h-11 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover/video:scale-110">
-                <Play className="w-5 h-5 fill-current ml-0.5" />
-              </div>
-            </div>
+          <div className="w-full h-full flex items-center justify-center bg-slate-800">
+            <Play className="w-8 h-8 text-slate-600" />
           </div>
         )}
+        <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center group-hover/video:bg-slate-950/20 transition-colors">
+          <div className="w-11 h-11 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover/video:scale-110">
+            <Play className="w-5 h-5 fill-current ml-0.5" />
+          </div>
+        </div>
       </div>
 
       {/* Footer bar with file info */}
       <div className="flex items-center justify-between px-3 py-2 bg-slate-900/80 border-t border-slate-800">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0" onClick={onOpenLightbox}>
           <Play className="w-3 h-3 text-emerald-400 flex-shrink-0" />
           <p className="text-[10px] text-slate-300 truncate">{file.name}</p>
         </div>
-        {file.size && (
-          <p className="text-[10px] text-slate-400 flex-shrink-0 ml-2">{file.size}</p>
-        )}
+        <div className="flex items-center gap-2">
+          {file.size && (
+            <p className="text-[10px] text-slate-400 flex-shrink-0">{file.size}</p>
+          )}
+          <a
+            href={file.downloadUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 rounded-md bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-colors shadow-sm"
+            title="Download Original"
+          >
+            <Download className="w-3 h-3" />
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -244,6 +243,7 @@ export default function MediaCard({ file, index, isSelected, onToggleSelect, onO
           file={file}
           isSelected={isSelected}
           onToggleSelect={onToggleSelect}
+          onOpenLightbox={onOpenLightbox}
         />
       ) : (
         <PhotoCard

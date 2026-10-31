@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
+import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import MediaCard from './MediaCard';
 import { Search, SlidersHorizontal, Image as ImageIcon, Video,
-  Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft,
+  Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft, Download,
 } from 'lucide-react';
 
 // ── Filter pill button ────────────────────────────────────────────────────────
@@ -39,16 +42,18 @@ export default function Gallery({
   error,
   selectedFiles,
   onToggleSelect,
-  onOpenLightbox,
   onRetry,
   onSelectAll,
   onClearSelection,
   onBack,
   districtName = 'Bandarban',
 }) {
-  const [search, setSearch]     = useState('');
-  const [typeFilter, setType]   = useState('all'); // 'all' | 'photos' | 'videos'
-  const [sortBy, setSort]       = useState('default');
+  const [search, setSearch]           = useState('');
+  const [typeFilter, setType]         = useState('all'); // 'all' | 'photos' | 'videos'
+  const [sortBy, setSort]             = useState('default');
+  const [lightboxIndex, setLightboxIndex] = useState(-1);
+
+  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
   const photoCount = media.filter((m) => m.isImage).length;
   const videoCount = media.filter((m) => m.isVideo).length;
@@ -73,6 +78,63 @@ export default function Gallery({
 
     return items;
   }, [media, typeFilter, search, sortBy]);
+
+  // ── High-resolution slides mapping for Lightbox ─────────────────────────────
+  const slides = useMemo(() => {
+    return filtered.map((file) => {
+      const isVideoFile = file.isVideo || (file.mimeType && file.mimeType.includes('video'));
+      const highResUrl  = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+
+      if (isVideoFile) {
+        return {
+          type: 'video',
+          title: file.name,
+          src: highResUrl,
+          previewUrl: file.previewUrl || `https://drive.google.com/file/d/${file.id}/preview`,
+          poster: file.thumbnailLink || file.imgSrc,
+          file,
+        };
+      }
+
+      return {
+        type: 'image',
+        src: highResUrl,
+        alt: file.name,
+        file,
+      };
+    });
+  }, [filtered, apiKey]);
+
+  // ── Lightbox slide direct download ──────────────────────────────────────────
+  const handleDownloadSlide = async (slide) => {
+    if (!slide || !slide.file) return;
+    const file = slide.file;
+    try {
+      const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
+    } catch (err) {
+      console.warn('Direct blob download failed, falling back:', err);
+      if (file.downloadUrl) {
+        const a = document.createElement('a');
+        a.href = file.downloadUrl;
+        a.download = file.name;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    }
+  };
 
   const allFilteredSelected =
     filtered.length > 0 &&
@@ -239,18 +301,62 @@ export default function Gallery({
               index={idx}
               isSelected={selectedFiles.some((s) => s.id === file.id)}
               onToggleSelect={() => onToggleSelect(file)}
-              onOpenLightbox={() => {
-                // Only pass index of photos (videos play inline)
-                if (file.isImage) {
-                  const photoOnlyList = media.filter((m) => m.isImage);
-                  const photoIdx      = photoOnlyList.findIndex((m) => m.id === file.id);
-                  onOpenLightbox(photoIdx >= 0 ? photoIdx : 0);
-                }
-              }}
+              onOpenLightbox={() => setLightboxIndex(idx)}
             />
           ))}
         </div>
       )}
+
+      {/* ── Swipeable & Pinch-to-Zoom Lightbox ───────────────────────────────── */}
+      <Lightbox
+        open={lightboxIndex >= 0}
+        index={lightboxIndex}
+        close={() => setLightboxIndex(-1)}
+        slides={slides}
+        plugins={[Zoom]}
+        animation={{ fade: 250, swipe: 250 }}
+        carousel={{ finite: false }}
+        render={{
+          slide: ({ slide }) => {
+            if (slide.type === 'video') {
+              return (
+                <div className="relative w-full h-full max-w-4xl max-h-[80vh] flex items-center justify-center p-4">
+                  <iframe
+                    src={`${slide.previewUrl}?autoplay=1`}
+                    title={slide.title || 'Video Player'}
+                    className="w-full h-full aspect-video rounded-2xl border border-slate-800 shadow-2xl bg-black"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              );
+            }
+            return undefined; // uses default image rendering with Zoom support!
+          },
+        }}
+        toolbar={{
+          buttons: [
+            <button
+              key="download-slide-btn"
+              type="button"
+              title="Download high-resolution file"
+              onClick={() => {
+                if (lightboxIndex >= 0 && slides[lightboxIndex]) {
+                  handleDownloadSlide(slides[lightboxIndex]);
+                }
+              }}
+              className="yarl__button p-2 text-slate-200 hover:text-emerald-400 transition-colors cursor-pointer"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Download className="w-5 h-5 text-emerald-400" />
+            </button>,
+            'close',
+          ],
+        }}
+        on={{
+          view: ({ index }) => setLightboxIndex(index),
+        }}
+      />
     </section>
   );
 }
