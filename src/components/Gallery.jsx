@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import MediaCard from './MediaCard';
-import {
-  Search, SlidersHorizontal, Image as ImageIcon, Video,
-  Layers, AlertCircle, RefreshCw, CheckCheck, Square,
+import { Search, SlidersHorizontal, Image as ImageIcon, Video,
+  Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft,
 } from 'lucide-react';
 
 // ── Filter pill button ────────────────────────────────────────────────────────
@@ -44,6 +43,8 @@ export default function Gallery({
   onRetry,
   onSelectAll,
   onClearSelection,
+  onBack,
+  districtName = 'Bandarban',
 }) {
   const [search, setSearch]     = useState('');
   const [typeFilter, setType]   = useState('all'); // 'all' | 'photos' | 'videos'
@@ -88,16 +89,32 @@ export default function Gallery({
   return (
     <section id="gallery" className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
+      {/* ── Back button ─────────────────────────────────────────────────────── */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="
+            mb-8 inline-flex items-center gap-2 px-4 py-2 rounded-xl
+            text-sm font-medium text-slate-400 hover:text-white
+            bg-slate-900 border border-slate-800 hover:border-slate-600
+            transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer
+          "
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Districts
+        </button>
+      )}
+
       {/* ── Section header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 pb-7 border-b border-slate-800 mb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
-              437 Memories · Bandarban 2026
+              {isLoading ? 'Loading Memories…' : `${media.length} Memories`} · {districtName}
             </p>
-            <h2 className="text-3xl font-bold text-white mt-0.5">Visual Chronicles</h2>
+            <h2 className="text-3xl font-bold text-white mt-0.5">{districtName} Visual Chronicles</h2>
             <p className="text-sm text-slate-400 mt-1 max-w-lg">
-              Click any photo to open it full-screen. Videos play inline. Select items and bulk-download in original quality.
+              Click any photo to open it full-screen. Videos play inline. Select items and download directly in original quality.
             </p>
           </div>
 
@@ -212,9 +229,9 @@ export default function Gallery({
         </div>
       )}
 
-      {/* ── Masonry grid ────────────────────────────────────────────────────── */}
+      {/* ── Responsive grid ──────────────────────────────────────────────────── */}
       {filtered.length > 0 && (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {filtered.map((file, idx) => (
             <MediaCard
               key={file.id}

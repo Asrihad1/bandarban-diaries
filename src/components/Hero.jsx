@@ -6,7 +6,9 @@ const WAYPOINTS = [
   'Cumilla', 'Chakaria', 'Alikadam', 'Alir Guha', 'Dim Pahar', 'Toma Tungi', 'Thanchi',
 ];
 
-export default function Hero({ totalMedia, onScrollToGallery }) {
+export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Bandarban' }) {
+  const isBandarban = districtName === 'Bandarban';
+
   return (
     <section className="relative min-h-screen flex flex-col justify-between items-center text-center px-4 py-12 overflow-hidden bg-slate-950">
 
@@ -25,7 +27,7 @@ export default function Hero({ totalMedia, onScrollToGallery }) {
         className="relative z-10 flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/30 bg-slate-900/60 backdrop-blur-md text-emerald-400 text-xs font-medium tracking-wider uppercase"
       >
         <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '16s' }} />
-        Bandarban Expedition · Bangladesh · 2026
+        {districtName} Expedition · Bangladesh
       </motion.div>
 
       {/* Hero copy */}
@@ -36,9 +38,9 @@ export default function Hero({ totalMedia, onScrollToGallery }) {
           transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white leading-[1.05]"
         >
-          Into the Hills:<br />
+          {isBandarban ? 'Into the Hills:' : 'Discovering Bangladesh:'}<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500">
-            The Bandarban Diaries
+            The {districtName} Diaries
           </span>
         </motion.h1>
 
@@ -48,28 +50,39 @@ export default function Hero({ totalMedia, onScrollToGallery }) {
           transition={{ duration: 0.8, delay: 0.45 }}
           className="mt-6 text-lg sm:text-2xl text-slate-300 font-light tracking-wide max-w-2xl"
         >
-          <span className="text-emerald-400 font-medium">9 Friends.</span>{' '}
-          <span className="text-emerald-400 font-medium">{totalMedia || 437} Memories.</span>{' '}
-          One Epic Adventure.
+          {isBandarban ? (
+            <>
+              <span className="text-emerald-400 font-medium">9 Friends.</span>{' '}
+              <span className="text-emerald-400 font-medium">{totalMedia || 437} Memories.</span>{' '}
+              One Epic Adventure.
+            </>
+          ) : (
+            <>
+              <span className="text-emerald-400 font-medium">{totalMedia || 0} Memories.</span>{' '}
+              Exploration of {districtName}.
+            </>
+          )}
         </motion.p>
 
         {/* Route waypoints */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-8 flex flex-wrap justify-center items-center gap-2 max-w-3xl"
-        >
-          {WAYPOINTS.map((stop, i) => (
-            <React.Fragment key={stop}>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-slate-300 bg-slate-900/80 border border-slate-800 backdrop-blur-sm hover:border-emerald-500/40 transition-colors">
-                <MapPin className="w-3 h-3 text-emerald-400" />
-                {stop}
-              </span>
-              {i < WAYPOINTS.length - 1 && <span className="text-slate-600 text-xs">→</span>}
-            </React.Fragment>
-          ))}
-        </motion.div>
+        {isBandarban && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.7 }}
+            className="mt-8 flex flex-wrap justify-center items-center gap-2 max-w-3xl"
+          >
+            {WAYPOINTS.map((stop, i) => (
+              <React.Fragment key={stop}>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-slate-300 bg-slate-900/80 border border-slate-800 backdrop-blur-sm hover:border-emerald-500/40 transition-colors">
+                  <MapPin className="w-3 h-3 text-emerald-400" />
+                  {stop}
+                </span>
+                {i < WAYPOINTS.length - 1 && <span className="text-slate-600 text-xs">→</span>}
+              </React.Fragment>
+            ))}
+          </motion.div>
+        )}
 
         {/* CTA */}
         <motion.div

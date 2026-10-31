@@ -32,7 +32,7 @@ function SelectionCheckbox({ isSelected, onToggle }) {
       >
         {isSelected
           ? <CheckSquare className="w-4 h-4" />
-          : <Square      className="w-4 h-4" />
+          : <Square className="w-4 h-4" />
         }
       </button>
     </div>
@@ -42,26 +42,30 @@ function SelectionCheckbox({ isSelected, onToggle }) {
 // ─── Photo Card ───────────────────────────────────────────────────────────────
 
 function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
-  const [src, setSrc]         = React.useState(file.lhPreview || file.viewUrl);
-  const [visible, setVisible] = React.useState(true);
-  const [loaded, setLoaded]   = React.useState(false);
-  const [fallback, setFallback] = React.useState(false);
+  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
+  const initialSrc = file.imgSrc || file.thumbnailLink || (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : file.viewUrl);
+  const [src, setSrc] = React.useState(initialSrc);
+  const [hasError, setHasError] = React.useState(false);
+
+  // Sync state if file prop changes
+  React.useEffect(() => {
+    setSrc(initialSrc);
+    setHasError(false);
+  }, [initialSrc]);
 
   const handleError = React.useCallback(() => {
-    if (!fallback && file.viewUrl && src !== file.viewUrl) {
-      setFallback(true);
-      setSrc(file.viewUrl);
+    const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+    if (src !== directAltUrl) {
+      setSrc(directAltUrl);
     } else {
-      setVisible(false); // hide completely on double-error
+      setHasError(true);
     }
-  }, [fallback, file.viewUrl, src]);
-
-  if (!visible) return null;
+  }, [file.id, src, apiKey]);
 
   return (
     <div
       className={`
-        relative group overflow-hidden rounded-2xl cursor-pointer
+        relative group overflow-hidden rounded-2xl cursor-pointer bg-slate-800
         border-2 transition-all duration-300 shadow-md
         ${isSelected
           ? 'border-emerald-500 shadow-emerald-500/30 shadow-xl'
@@ -71,26 +75,25 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
     >
       <SelectionCheckbox isSelected={isSelected} onToggle={onToggleSelect} />
 
-      {/* Skeleton while loading */}
-      {!loaded && (
-        <div className="w-full h-56 bg-slate-800 animate-pulse flex items-center justify-center">
-          <Camera className="w-6 h-6 text-slate-600" />
+      {hasError ? (
+        <div
+          onClick={onOpenLightbox}
+          className="w-full h-48 sm:h-56 bg-slate-800 flex flex-col items-center justify-center p-3 text-slate-500 text-center"
+        >
+          <Camera className="w-8 h-8 mb-1.5 opacity-60" />
+          <p className="text-[11px] truncate max-w-full px-2">{file.name}</p>
         </div>
+      ) : (
+        <img
+          src={src}
+          alt={file.name}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={handleError}
+          onClick={onOpenLightbox}
+          className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover:scale-105"
+        />
       )}
-
-      <img
-        src={src}
-        alt={file.name}
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-        onError={handleError}
-        onClick={onOpenLightbox}
-        className={`
-          w-full h-auto object-cover
-          transition-transform duration-700 group-hover:scale-105
-          ${loaded ? 'opacity-100' : 'opacity-0 h-0'}
-        `}
-      />
 
       {/* Hover overlay */}
       <div
@@ -133,10 +136,19 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
 // ─── Video Card ───────────────────────────────────────────────────────────────
 
 function VideoCard({ file, isSelected, onToggleSelect }) {
+  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
+  const initialSrc = file.imgSrc || file.thumbnailLink || (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [src, setSrc] = React.useState(initialSrc);
+
+  React.useEffect(() => {
+    setSrc(initialSrc);
+  }, [initialSrc]);
+
   return (
     <div
       className={`
-        relative group overflow-hidden rounded-2xl
+        relative group overflow-hidden rounded-2xl bg-slate-800
         border-2 transition-all duration-300 shadow-md
         ${isSelected
           ? 'border-emerald-500 shadow-emerald-500/30 shadow-xl'
@@ -144,11 +156,6 @@ function VideoCard({ file, isSelected, onToggleSelect }) {
         }
       `}
     >
-      {/*
-       * CRITICAL z-index fix:
-       * The SelectionCheckbox sits in a z-20 pointer-events-auto div,
-       * so it intercepts clicks BEFORE they reach the iframe below.
-       */}
       <SelectionCheckbox isSelected={isSelected} onToggle={onToggleSelect} />
 
       {/* Video badge */}
@@ -157,21 +164,45 @@ function VideoCard({ file, isSelected, onToggleSelect }) {
         <span>VIDEO</span>
       </div>
 
-      {/*
-       * Drive preview iframe — smooth playback without throttle.
-       * The container below handles z-layering; the iframe gets z-10 so it
-       * sits under the z-20 checkbox overlay.
-       */}
-      <div className="relative w-full aspect-video bg-slate-900 z-10">
-        <iframe
-          src={file.previewUrl}
-          title={file.name}
-          width="100%"
-          height="100%"
-          allow="autoplay"
-          className="absolute inset-0 w-full h-full border-none"
-          loading="lazy"
-        />
+      <div className="relative w-full h-48 sm:h-56 bg-slate-900 z-10 overflow-hidden">
+        {isPlaying ? (
+          <iframe
+            src={`${file.previewUrl}?autoplay=1`}
+            title={file.name}
+            width="100%"
+            height="100%"
+            allow="autoplay"
+            className="absolute inset-0 w-full h-full border-none"
+          />
+        ) : (
+          <div
+            onClick={() => setIsPlaying(true)}
+            className="relative w-full h-full cursor-pointer group/video"
+          >
+            {src ? (
+              <img
+                src={src}
+                alt={file.name}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => {
+                  const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+                  if (src !== directAltUrl) setSrc(directAltUrl);
+                }}
+                className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover/video:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                <Play className="w-8 h-8 text-slate-600" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center group-hover/video:bg-slate-950/20 transition-colors">
+              <div className="w-11 h-11 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover/video:scale-110">
+                <Play className="w-5 h-5 fill-current ml-0.5" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer bar with file info */}
@@ -206,7 +237,7 @@ export default function MediaCard({ file, index, isSelected, onToggleSelect, onO
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: '-60px' }}
-      className="mb-5 break-inside-avoid"
+      className="break-inside-avoid"
     >
       {file.isVideo ? (
         <VideoCard

@@ -1,14 +1,42 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Hero       from './components/Hero';
-import Gallery    from './components/Gallery';
-import Lightbox   from './components/Lightbox';
-import FloatingBar from './components/FloatingBar';
+import HomeDashboard from './components/HomeDashboard';
+import Hero          from './components/Hero';
+import Gallery       from './components/Gallery';
+import Lightbox      from './components/Lightbox';
+import FloatingBar   from './components/FloatingBar';
 import { fetchAllDriveMedia } from './services/driveService';
 
+const STORAGE_KEY = 'bangladesh_64_unlocked_districts';
+const DEFAULT_FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '1BNXR0LUJFUmhCIOvgMg_wp7M6LhCfPTr';
+
+function getInitialUnlocked() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...parsed,
+        Bandarban: DEFAULT_FOLDER_ID, // permanently unlocked
+      };
+    }
+  } catch (err) {
+    console.error('Error reading unlocked districts from localStorage:', err);
+  }
+  return { Bandarban: DEFAULT_FOLDER_ID };
+}
+
 export default function App() {
+  // ── Unlocked districts state (persisted via localStorage) ─────────────────────
+  const [unlockedDistricts, setUnlockedDistricts] = useState(getInitialUnlocked);
+
+  // ── View routing ─────────────────────────────────────────────────────────────
+  const [currentView,    setCurrentView]    = useState('home'); // 'home' | 'gallery'
+  const [activeDistrict, setActiveDistrict] = useState('Bandarban');
+  const [activeFolderId, setActiveFolderId] = useState(DEFAULT_FOLDER_ID);
+
   // ── Media state ─────────────────────────────────────────────────────────────
   const [media,       setMedia]       = useState([]);
-  const [isLoading,   setIsLoading]   = useState(true);
+  const [isLoading,   setIsLoading]   = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [error,       setError]       = useState(null);
 
@@ -22,14 +50,14 @@ export default function App() {
   // Only photos go into the lightbox navigation list
   const photos = media.filter((m) => m.isImage);
 
-  // ── Load all Drive media ─────────────────────────────────────────────────────
-  const loadMedia = useCallback(async () => {
+  // ── Load Drive media for a given folder ──────────────────────────────────────
+  const loadMedia = useCallback(async (folderId) => {
     setIsLoading(true);
     setError(null);
     setLoadedCount(0);
 
     try {
-      const files = await fetchAllDriveMedia((count) => setLoadedCount(count));
+      const files = await fetchAllDriveMedia((count) => setLoadedCount(count), folderId);
       setMedia(files);
     } catch (err) {
       setError(err.message || 'Unable to load media from Google Drive.');
@@ -38,7 +66,47 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { loadMedia(); }, [loadMedia]);
+  // Fetch media whenever entering gallery or when activeFolderId changes
+  useEffect(() => {
+    if (currentView === 'gallery' && activeFolderId) {
+      loadMedia(activeFolderId);
+    }
+  }, [currentView, activeFolderId, loadMedia]);
+
+  // ── Unlock district handler ──────────────────────────────────────────────────
+  const handleUnlockDistrict = useCallback((name, folderId) => {
+    setUnlockedDistricts((prev) => {
+      const updated = {
+        ...prev,
+        [name]: folderId,
+        Bandarban: DEFAULT_FOLDER_ID, // ensure Bandarban is kept
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('Error saving unlocked districts to localStorage:', err);
+      }
+      return updated;
+    });
+  }, []);
+
+  // ── Navigation handlers ──────────────────────────────────────────────────────
+  const handleSelectDistrict = useCallback((name, folderId) => {
+    setActiveDistrict(name);
+    setActiveFolderId(folderId || DEFAULT_FOLDER_ID);
+    setMedia([]);
+    setSelectedFiles([]);
+    setLightboxOpen(false);
+    setCurrentView('gallery');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleBackToHome = useCallback(() => {
+    setCurrentView('home');
+    setSelectedFiles([]);
+    setLightboxOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // ── Selection handlers ───────────────────────────────────────────────────────
   const handleToggleSelect = useCallback((file) => {
@@ -52,7 +120,7 @@ export default function App() {
   const handleSelectAll = useCallback((files) => {
     setSelectedFiles((prev) => {
       const newIds = new Set(files.map((f) => f.id));
-      const kept   = prev.filter((f) => !newIds.has(f.id)); // avoid duplicates
+      const kept   = prev.filter((f) => !newIds.has(f.id));
       return [...kept, ...files];
     });
   }, []);
@@ -77,19 +145,32 @@ export default function App() {
     setLightboxIndex((i) => (i < photos.length - 1 ? i + 1 : 0)),
   [photos.length]);
 
-  // ── Scroll helpers ───────────────────────────────────────────────────────────
+  // ── Scroll helper ────────────────────────────────────────────────────────────
   const scrollToGallery = () =>
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' });
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+  if (currentView === 'home') {
+    return (
+      <HomeDashboard
+        unlockedDistricts={unlockedDistricts}
+        onSelectDistrict={handleSelectDistrict}
+        onUnlockDistrict={handleUnlockDistrict}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
 
       <Hero
-        totalMedia={media.length || 437}
+        districtName={activeDistrict}
+        totalMedia={media.length}
         onScrollToGallery={scrollToGallery}
       />
 
       <Gallery
+        districtName={activeDistrict}
         media={media}
         isLoading={isLoading}
         loadedCount={loadedCount}
@@ -97,9 +178,10 @@ export default function App() {
         selectedFiles={selectedFiles}
         onToggleSelect={handleToggleSelect}
         onOpenLightbox={handleOpenLightbox}
-        onRetry={loadMedia}
+        onRetry={() => loadMedia(activeFolderId)}
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
+        onBack={handleBackToHome}
       />
 
       {/* Lightbox — photos only; videos play inline via iframes */}

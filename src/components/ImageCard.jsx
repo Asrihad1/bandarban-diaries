@@ -4,7 +4,7 @@ import { Download, Maximize2, Camera } from 'lucide-react';
 
 export default function ImageCard({ image, index, onImageClick }) {
   const [hasError, setHasError] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState(image.viewUrl);
+  const [currentSrc, setCurrentSrc] = useState(image.thumbnailLink || image.viewUrl);
   const [isLoaded, setIsLoaded] = useState(false);
   const [fallbackAttempted, setFallbackAttempted] = useState(false);
 

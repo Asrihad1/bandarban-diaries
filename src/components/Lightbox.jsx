@@ -87,8 +87,9 @@ export default function Lightbox({ images, currentIndex, isOpen, onClose, onPrev
         >
           <motion.img
             key={img.id}
-            src={img.lhPreview || img.viewUrl}
+            src={img.lhPreview || img.imgSrc || img.thumbnailLink || img.viewUrl}
             alt={img.name}
+            referrerPolicy="no-referrer"
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
