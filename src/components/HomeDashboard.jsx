@@ -30,7 +30,7 @@ const containerVariants = {
 };
 
 const itemVariants = {
-  hidden:  { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
 };
 
@@ -46,7 +46,7 @@ function extractFolderId(input) {
 // ── Unlock Modal ──────────────────────────────────────────────────────────────
 function UnlockModal({ districtName, onConfirm, onClose }) {
   const [folderInput, setFolderInput] = useState('');
-  const [error, setError]             = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -73,8 +73,8 @@ function UnlockModal({ districtName, onConfirm, onClose }) {
     >
       <motion.div
         initial={{ scale: 0.92, opacity: 0, y: 24 }}
-        animate={{ scale: 1,    opacity: 1, y: 0 }}
-        exit={{    scale: 0.92, opacity: 0, y: 24 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0, y: 24 }}
         transition={{ type: 'spring', damping: 22, stiffness: 300 }}
         className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-slate-950/70 p-6"
       >
@@ -215,8 +215,8 @@ function LockedCard({ name, onClick }) {
 export default function HomeDashboard({ unlockedDistricts, onSelectDistrict, onUnlockDistrict }) {
   const [unlockTarget, setUnlockTarget] = useState(null); // district name being unlocked
 
-  const unlockedNames  = Object.keys(unlockedDistricts);
-  const visitedCount   = unlockedNames.length;
+  const unlockedNames = Object.keys(unlockedDistricts);
+  const visitedCount = unlockedNames.length;
   const lockedDistricts = ALL_DISTRICTS.filter((d) => !unlockedDistricts[d]);
 
   const handleLockedClick = (name) => setUnlockTarget(name);

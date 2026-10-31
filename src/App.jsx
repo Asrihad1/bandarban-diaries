@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HomeDashboard from './components/HomeDashboard';
-import Hero          from './components/Hero';
-import Gallery       from './components/Gallery';
-import FloatingBar   from './components/FloatingBar';
+import Hero from './components/Hero';
+import Gallery from './components/Gallery';
+import FloatingBar from './components/FloatingBar';
 import { fetchAllDriveMedia } from './services/driveService';
 
 const STORAGE_KEY = 'bangladesh_64_unlocked_districts';
@@ -29,15 +29,15 @@ export default function App() {
   const [unlockedDistricts, setUnlockedDistricts] = useState(getInitialUnlocked);
 
   // ── View routing ─────────────────────────────────────────────────────────────
-  const [currentView,    setCurrentView]    = useState('home'); // 'home' | 'gallery'
+  const [currentView, setCurrentView] = useState('home'); // 'home' | 'gallery'
   const [activeDistrict, setActiveDistrict] = useState('Bandarban');
   const [activeFolderId, setActiveFolderId] = useState(DEFAULT_FOLDER_ID);
 
   // ── Media state ─────────────────────────────────────────────────────────────
-  const [media,       setMedia]       = useState([]);
-  const [isLoading,   setIsLoading]   = useState(false);
+  const [media, setMedia] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
-  const [error,       setError]       = useState(null);
+  const [error, setError] = useState(null);
 
   // ── Selection state (photos + videos) ───────────────────────────────────────
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -88,7 +88,6 @@ export default function App() {
     setActiveFolderId(folderId || DEFAULT_FOLDER_ID);
     setMedia([]);
     setSelectedFiles([]);
-    setLightboxOpen(false);
     setCurrentView('gallery');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
@@ -96,7 +95,6 @@ export default function App() {
   const handleBackToHome = useCallback(() => {
     setCurrentView('home');
     setSelectedFiles([]);
-    setLightboxOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -112,7 +110,7 @@ export default function App() {
   const handleSelectAll = useCallback((files) => {
     setSelectedFiles((prev) => {
       const newIds = new Set(files.map((f) => f.id));
-      const kept   = prev.filter((f) => !newIds.has(f.id));
+      const kept = prev.filter((f) => !newIds.has(f.id));
       return [...kept, ...files];
     });
   }, []);
