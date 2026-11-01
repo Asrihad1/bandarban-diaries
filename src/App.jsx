@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
 import HomeDashboard from './components/HomeDashboard';
 import Hero from './components/Hero';
 import JourneyBanner from './components/JourneyBanner';
@@ -7,20 +9,17 @@ import FloatingBar from './components/FloatingBar';
 import Footer from './components/Footer';
 import { fetchAllDriveMedia } from './services/driveService';
 
-const STORAGE_KEY = 'bangladesh_64_unlocked_districts';
 const DEFAULT_FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '1BNXR0LUJFUmhCIOvgMg_wp7M6LhCfPTr';
 const DEFAULT_API_KEY = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY || '';
 
-/** Bandarban always uses the credentials from .env (never read from / written to localStorage). */
+/** Bandarban defaults to the credentials from .env. */
 const BANDARBAN_DISTRICT = { folderId: DEFAULT_FOLDER_ID, apiKey: DEFAULT_API_KEY };
 
 /** Unique cache key per folder + account, so the same folder via another key is a separate load. */
 const sourceKey = (folderId, apiKey) => `${folderId}::${apiKey}`;
 
 /**
- * Normalises a stored district entry to `{ folderId, apiKey }`.
- * Legacy entries saved before multi-account support were plain folder-ID strings;
- * those are migrated to use the default .env API key.
+ * Normalises a district entry to `{ folderId, apiKey }`.
  */
 function normalizeDistrict(entry) {
   if (typeof entry === 'string') {
@@ -32,38 +31,11 @@ function normalizeDistrict(entry) {
   return null;
 }
 
-function getInitialUnlocked() {
-  const result = {};
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      for (const [name, entry] of Object.entries(parsed || {})) {
-        const district = normalizeDistrict(entry);
-        if (district) result[name] = district;
-      }
-    }
-  } catch (err) {
-    console.error('Error reading unlocked districts from localStorage:', err);
-  }
-  // Bandarban first + permanently unlocked with .env credentials
-  delete result.Bandarban;
-  return { Bandarban: BANDARBAN_DISTRICT, ...result };
-}
-
-function persistUnlocked(districts) {
-  try {
-    const custom = { ...districts };
-    delete custom.Bandarban; // .env-backed, no need to store its key in the browser
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
-  } catch (err) {
-    console.error('Error saving unlocked districts to localStorage:', err);
-  }
-}
-
 export default function App() {
-  // ── Unlocked districts state: { [name]: { folderId, apiKey } } (persisted) ────
-  const [unlockedDistricts, setUnlockedDistricts] = useState(getInitialUnlocked);
+  // ── Unlocked districts state: { [name]: { folderId, apiKey } } (synced via Firestore) ──
+  const [unlockedDistricts, setUnlockedDistricts] = useState({
+    Bandarban: BANDARBAN_DISTRICT,
+  });
 
   // ── View routing ─────────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'gallery'
@@ -146,17 +118,38 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
-  // ── Unlock district handler ──────────────────────────────────────────────────
-  const handleUnlockDistrict = useCallback((name, { folderId, apiKey }) => {
-    setUnlockedDistricts((prev) => {
-      const updated = {
-        ...prev,
-        [name]: { folderId, apiKey },
-        Bandarban: BANDARBAN_DISTRICT, // ensure Bandarban is kept
-      };
-      persistUnlocked(updated);
-      return updated;
-    });
+  // ── Real-time Firestore listener for unlocked districts ──────────────────────
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'unlocked_districts'),
+      (snapshot) => {
+        const districts = { Bandarban: BANDARBAN_DISTRICT };
+        snapshot.docs.forEach((docSnap) => {
+          const { folderId, apiKey } = docSnap.data() || {};
+          if (folderId) {
+            districts[docSnap.id] = {
+              folderId,
+              apiKey: apiKey || DEFAULT_API_KEY,
+            };
+          }
+        });
+        setUnlockedDistricts(districts);
+      },
+      (err) => {
+        console.error('Error syncing unlocked districts from Firestore:', err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // ── Unlock district handler (writes to Firestore) ────────────────────────────
+  const handleUnlockDistrict = useCallback(async (districtName, { folderId, apiKey }) => {
+    try {
+      await setDoc(doc(db, 'unlocked_districts', districtName), { folderId, apiKey });
+    } catch (err) {
+      console.error('Error unlocking district in Firestore:', err);
+    }
   }, []);
 
   // ── Navigation handlers ──────────────────────────────────────────────────────
