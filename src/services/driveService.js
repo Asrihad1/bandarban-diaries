@@ -49,10 +49,11 @@ export const isImage = (mimeType = '') => mimeType.startsWith('image/');
  * Fetches ALL files from the Drive folder using a while-loop over nextPageToken.
  * @param {(count: number) => void} [onProgress] - Live progress callback
  * @param {string} [folderId] - Override folder ID (falls back to env var)
+ * @param {AbortSignal} [signal] - Optional AbortSignal to cancel in-flight requests
  * @returns {Promise<Array>} Unified array of all mapped media files
  */
-export async function fetchAllDriveMedia(onProgress, folderId) {
-  const targetFolder = folderId || import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
+export async function fetchAllDriveMedia(onProgress, folderId, signal) {
+  const targetFolder = (folderId || import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '').trim();
 
   if (!targetFolder || !API_KEY) {
     throw new Error(
@@ -60,21 +61,30 @@ export async function fetchAllDriveMedia(onProgress, folderId) {
     );
   }
 
+  const safeFolderId = targetFolder.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safeFolderId) {
+    throw new Error('Invalid Google Drive Folder ID.');
+  }
+
   const allFiles = [];
   let pageToken  = null;
 
   while (true) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
     const url = new URL(BASE_URL);
-    url.searchParams.set('q',         `'${targetFolder}' in parents and trashed = false`);
+    url.searchParams.set('q',         `'${safeFolderId}' in parents and trashed = false`);
     url.searchParams.set('key',        API_KEY);
     url.searchParams.set('pageSize',  '100');
     url.searchParams.set(
       'fields',
-      'nextPageToken, files(id, name, mimeType, thumbnailLink, size, createdTime, imageMediaMetadata)'
+      'nextPageToken, files(id, name, mimeType, thumbnailLink, size, createdTime, imageMediaMetadata, videoMediaMetadata)'
     );
     if (pageToken) url.searchParams.set('pageToken', pageToken);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), { signal });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error?.message ?? `Drive API error: HTTP ${response.status}`);
@@ -84,37 +94,44 @@ export async function fetchAllDriveMedia(onProgress, folderId) {
     const files = data.files ?? [];
 
     for (const file of files) {
-      // Accept only image and video mimeTypes
-      if (!isImage(file.mimeType) && !isVideo(file.mimeType)) continue;
+      const videoFile = isVideo(file.mimeType);
+      const imageFile = isImage(file.mimeType);
 
-      // Safe fallback for thumbnail: if Google Drive didn't generate thumbnailLink,
-      // fallback to direct alt=media endpoint using API key
+      // Accept only image and video mimeTypes
+      if (!imageFile && !videoFile) continue;
+
+      // Never fallback a video's <img> thumbnail to `alt=media` (which downloads the entire multi-hundred-MB MP4)
       const imgSrc = file.thumbnailLink
-        ? (file.thumbnailLink.includes('=s220')
-            ? file.thumbnailLink.replace('=s220', '=w600')
-            : file.thumbnailLink.replace(/=[sw]\d+.*$/, '=w600'))
-        : `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+        ? getOptimizedThumbnail(file.thumbnailLink, 600)
+        : imageFile
+          ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`
+          : `https://drive.google.com/thumbnail?id=${file.id}&sz=w600`;
 
       const lightboxThumb = file.thumbnailLink
-        ? file.thumbnailLink.replace(/=[sw]\d+.*$/, '=w1600')
-        : imgSrc;
+        ? getOptimizedThumbnail(file.thumbnailLink, 1600)
+        : imageFile
+          ? imgSrc
+          : `https://drive.google.com/thumbnail?id=${file.id}&sz=w1200`;
 
       allFiles.push({
         id:            file.id,
         name:          file.name,
         mimeType:      file.mimeType,
         size:          file.size ? formatBytes(file.size) : null,
+        rawSize:       file.size ? Number(file.size) : 0,
         createdTime:   file.createdTime ?? null,
         metadata:      file.imageMediaMetadata ?? null,
+        videoMetadata: file.videoMediaMetadata ?? null,
         imgSrc:        imgSrc,
         thumbnailLink: imgSrc,
         // Resolved URLs
-        viewUrl:       isImage(file.mimeType) ? viewUrl(file.id)    : null,
-        previewUrl:    isVideo(file.mimeType) ? previewUrl(file.id) : null,
+        viewUrl:       imageFile ? viewUrl(file.id)    : null,
+        previewUrl:    videoFile ? previewUrl(file.id) : null,
+        streamUrl:     `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`,
         downloadUrl:   downloadUrl(file.id),
         lhPreview:     lightboxThumb,
-        isVideo:       isVideo(file.mimeType),
-        isImage:       isImage(file.mimeType),
+        isVideo:       videoFile,
+        isImage:       imageFile,
       });
     }
 

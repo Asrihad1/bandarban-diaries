@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import HomeDashboard from './components/HomeDashboard';
 import Hero from './components/Hero';
+import JourneyBanner from './components/JourneyBanner';
 import Gallery from './components/Gallery';
 import FloatingBar from './components/FloatingBar';
+import Footer from './components/Footer';
 import { fetchAllDriveMedia } from './services/driveService';
 
 const STORAGE_KEY = 'bangladesh_64_unlocked_districts';
@@ -41,29 +43,38 @@ export default function App() {
 
   // ── Selection state (photos + videos) ───────────────────────────────────────
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const abortControllerRef = useRef(null);
 
-  // ── Load Drive media for a given folder ──────────────────────────────────────
+  // ── Load Drive media for a given folder (with AbortController protection) ───
   const loadMedia = useCallback(async (folderId) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
     setError(null);
     setLoadedCount(0);
 
     try {
-      const files = await fetchAllDriveMedia((count) => setLoadedCount(count), folderId);
-      setMedia(files);
+      const files = await fetchAllDriveMedia(
+        (count) => setLoadedCount(count),
+        folderId,
+        controller.signal
+      );
+      if (!controller.signal.aborted) {
+        setMedia(files);
+      }
     } catch (err) {
+      if (err?.name === 'AbortError') return;
       setError(err.message || 'Unable to load media from Google Drive.');
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, []);
-
-  // Fetch media whenever entering gallery or when activeFolderId changes
-  useEffect(() => {
-    if (currentView === 'gallery' && activeFolderId) {
-      loadMedia(activeFolderId);
-    }
-  }, [currentView, activeFolderId, loadMedia]);
 
   // ── Unlock district handler ──────────────────────────────────────────────────
   const handleUnlockDistrict = useCallback((name, folderId) => {
@@ -84,15 +95,20 @@ export default function App() {
 
   // ── Navigation handlers ──────────────────────────────────────────────────────
   const handleSelectDistrict = useCallback((name, folderId) => {
+    const targetFolder = folderId || DEFAULT_FOLDER_ID;
     setActiveDistrict(name);
-    setActiveFolderId(folderId || DEFAULT_FOLDER_ID);
+    setActiveFolderId(targetFolder);
     setMedia([]);
     setSelectedFiles([]);
     setCurrentView('gallery');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    loadMedia(targetFolder);
+  }, [loadMedia]);
 
   const handleBackToHome = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setCurrentView('home');
     setSelectedFiles([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -119,9 +135,12 @@ export default function App() {
     setSelectedFiles([]);
   }, []);
 
-  // ── Scroll helper ────────────────────────────────────────────────────────────
+  // ── Scroll helpers ───────────────────────────────────────────────────────────
   const scrollToGallery = () =>
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' });
+
+  const scrollToTop = () =>
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // ── Render ───────────────────────────────────────────────────────────────────
   if (currentView === 'home') {
@@ -143,6 +162,8 @@ export default function App() {
         onScrollToGallery={scrollToGallery}
       />
 
+      {activeDistrict === 'Bandarban' && <JourneyBanner />}
+
       <Gallery
         districtName={activeDistrict}
         media={media}
@@ -156,6 +177,8 @@ export default function App() {
         onClearSelection={handleClearSelection}
         onBack={handleBackToHome}
       />
+
+      <Footer onScrollToTop={scrollToTop} />
 
       {/* Floating action bar — appears when ≥1 file is selected */}
       <FloatingBar

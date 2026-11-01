@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 // ── All 64 districts of Bangladesh (alphabetical, Bandarban first) ────────────
-export const ALL_DISTRICTS = [
+const ALL_DISTRICTS = [
   'Bandarban',
   'Bagerhat', 'Brahmanbaria', 'Barguna', 'Barisal', 'Bhola',
   'Bogura', 'Chandpur', 'Chapai Nawabganj', 'Chattogram', 'Chuadanga',
@@ -40,7 +40,8 @@ function extractFolderId(input) {
   const trimmed = input.trim();
   const match = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
   if (match) return match[1];
-  return trimmed;
+  if (/^[a-zA-Z0-9_-]{15,}$/.test(trimmed)) return trimmed;
+  return '';
 }
 
 // ── Unlock Modal ──────────────────────────────────────────────────────────────

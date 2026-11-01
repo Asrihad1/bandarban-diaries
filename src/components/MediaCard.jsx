@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { CheckSquare, Square, Download, Play, Camera, Maximize2 } from 'lucide-react';
 
@@ -8,8 +8,8 @@ function SelectionCheckbox({ isSelected, onToggle }) {
   return (
     /**
      * CRITICAL: This overlay uses pointer-events-auto + high z-index so the
-     * checkbox click registers even when an iframe (video) underneath would
-     * normally swallow all pointer events.
+     * checkbox click registers even when a media element underneath would
+     * normally swallow pointer events.
      */
     <div
       className="absolute top-2 left-2 z-20 pointer-events-auto"
@@ -43,24 +43,24 @@ function SelectionCheckbox({ isSelected, onToggle }) {
 
 function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
   const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
-  const initialSrc = file.imgSrc || file.thumbnailLink || (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : file.viewUrl);
-  const [src, setSrc] = React.useState(initialSrc);
-  const [hasError, setHasError] = React.useState(false);
+  const primarySrc =
+    file.imgSrc ||
+    file.thumbnailLink ||
+    (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : file.viewUrl);
 
-  // Sync state if file prop changes
-  React.useEffect(() => {
-    setSrc(initialSrc);
-    setHasError(false);
-  }, [initialSrc]);
+  const [useFallback, setUseFallback] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  const handleError = React.useCallback(() => {
-    const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
-    if (src !== directAltUrl) {
-      setSrc(directAltUrl);
+  const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+  const currentSrc = useFallback ? directAltUrl : primarySrc;
+
+  const handleError = useCallback(() => {
+    if (!useFallback && primarySrc !== directAltUrl) {
+      setUseFallback(true);
     } else {
       setHasError(true);
     }
-  }, [file.id, src, apiKey]);
+  }, [useFallback, primarySrc, directAltUrl]);
 
   return (
     <div
@@ -85,9 +85,10 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
         </div>
       ) : (
         <img
-          src={src}
+          src={currentSrc}
           alt={file.name}
           loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={handleError}
           onClick={onOpenLightbox}
@@ -136,13 +137,26 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
 // ─── Video Card ───────────────────────────────────────────────────────────────
 
 function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
-  const initialSrc = file.imgSrc || file.thumbnailLink || (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : null);
-  const [src, setSrc] = React.useState(initialSrc);
+  // IMPORTANT: Never fallback a video thumbnail <img> to `alt=media`, as that
+  // forces the browser to download a multi-hundred-megabyte video stream inside <img>.
+  const primarySrc =
+    file.imgSrc ||
+    file.thumbnailLink ||
+    (file.id ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w600` : null);
 
-  React.useEffect(() => {
-    setSrc(initialSrc);
-  }, [initialSrc]);
+  const [useFallbackThumb, setUseFallbackThumb] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
+
+  const fallbackThumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w600`;
+  const currentSrc = useFallbackThumb ? fallbackThumbUrl : primarySrc;
+
+  const handleThumbError = useCallback(() => {
+    if (!useFallbackThumb && primarySrc !== fallbackThumbUrl) {
+      setUseFallbackThumb(true);
+    } else {
+      setThumbFailed(true);
+    }
+  }, [useFallbackThumb, primarySrc, fallbackThumbUrl]);
 
   return (
     <div
@@ -167,16 +181,14 @@ function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
         onClick={onOpenLightbox}
         className="relative w-full h-48 sm:h-56 bg-slate-900 z-10 overflow-hidden cursor-pointer group/video"
       >
-        {src ? (
+        {currentSrc && !thumbFailed ? (
           <img
-            src={src}
+            src={currentSrc}
             alt={file.name}
             loading="lazy"
+            decoding="async"
             referrerPolicy="no-referrer"
-            onError={() => {
-              const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
-              if (src !== directAltUrl) setSrc(directAltUrl);
-            }}
+            onError={handleThumbError}
             className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover/video:scale-105"
           />
         ) : (
@@ -229,7 +241,7 @@ const cardVariants = {
   },
 };
 
-export default function MediaCard({ file, index, isSelected, onToggleSelect, onOpenLightbox }) {
+export default function MediaCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -240,6 +252,7 @@ export default function MediaCard({ file, index, isSelected, onToggleSelect, onO
     >
       {file.isVideo ? (
         <VideoCard
+          key={file.id}
           file={file}
           isSelected={isSelected}
           onToggleSelect={onToggleSelect}
@@ -247,6 +260,7 @@ export default function MediaCard({ file, index, isSelected, onToggleSelect, onO
         />
       ) : (
         <PhotoCard
+          key={file.id}
           file={file}
           isSelected={isSelected}
           onToggleSelect={onToggleSelect}

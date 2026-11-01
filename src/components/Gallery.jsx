@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
@@ -56,8 +55,8 @@ export default function Gallery({
 
   const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
-  const photoCount = media.filter((m) => m.isImage).length;
-  const videoCount = media.filter((m) => m.isVideo).length;
+  const photoCount = useMemo(() => media.filter((m) => m.isImage).length, [media]);
+  const videoCount = useMemo(() => media.filter((m) => m.isVideo).length, [media]);
 
   const filtered = useMemo(() => {
     let items = [...media];
@@ -80,7 +79,7 @@ export default function Gallery({
     return items;
   }, [media, typeFilter, search, sortBy]);
 
-  // ── High-resolution slides mapping for Lightbox ─────────────────────────────
+  // ── Slides mapping for Lightbox ─────────────────────────────────────────────
   const slides = useMemo(() => {
     return filtered.map((file) => {
       const isVideoFile = file.isVideo || (file.mimeType && file.mimeType.includes('video'));
@@ -88,10 +87,9 @@ export default function Gallery({
 
       if (isVideoFile) {
         return {
-          type: 'video',
+          type: 'drive-video',
           title: file.name,
-          src: highResUrl,
-          previewUrl: file.previewUrl || `https://drive.google.com/file/d/${file.id}/preview`,
+          previewUrl: `https://drive.google.com/file/d/${file.id}/preview`,
           poster: file.thumbnailLink || file.imgSrc,
           file,
         };
@@ -137,9 +135,11 @@ export default function Gallery({
     }
   };
 
+  const selectedIdSet = useMemo(() => new Set(selectedFiles.map((s) => s.id)), [selectedFiles]);
+
   const allFilteredSelected =
     filtered.length > 0 &&
-    filtered.every((m) => selectedFiles.some((s) => s.id === m.id));
+    filtered.every((m) => selectedIdSet.has(m.id));
 
   const handleToggleSelectAll = () => {
     if (allFilteredSelected) {
@@ -255,7 +255,9 @@ export default function Gallery({
             <Layers className="absolute inset-0 m-auto w-6 h-6 text-emerald-400" />
           </div>
           <h3 className="text-lg font-medium text-white">Fetching from Google Drive…</h3>
-          <p className="text-xs text-slate-400 mt-1">Paginating through all 437 memories via Drive API v3</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Paginating through {districtName} memories via Drive API v3
+          </p>
           {loadedCount > 0 && (
             <span className="mt-4 px-3 py-1 rounded-full text-xs font-mono bg-emerald-950/50 border border-emerald-800/60 text-emerald-400">
               {loadedCount} files loaded so far…
@@ -299,8 +301,7 @@ export default function Gallery({
             <MediaCard
               key={file.id}
               file={file}
-              index={idx}
-              isSelected={selectedFiles.some((s) => s.id === file.id)}
+              isSelected={selectedIdSet.has(file.id)}
               onToggleSelect={() => onToggleSelect(file)}
               onOpenLightbox={() => setLightboxIndex(idx)}
             />
@@ -319,14 +320,14 @@ export default function Gallery({
         carousel={{ finite: false }}
         render={{
           slide: ({ slide }) => {
-            if (slide.type === 'video') {
+            if (slide.type === 'drive-video') {
               return (
                 <div className="relative w-full h-full max-w-4xl max-h-[80vh] flex items-center justify-center p-4">
                   <iframe
-                    src={`${slide.previewUrl}?autoplay=1`}
+                    src={slide.previewUrl}
                     title={slide.title || 'Video Player'}
                     className="w-full h-full aspect-video rounded-2xl border border-slate-800 shadow-2xl bg-black"
-                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allow="autoplay; encrypted-media; fullscreen"
                     allowFullScreen
                   />
                 </div>

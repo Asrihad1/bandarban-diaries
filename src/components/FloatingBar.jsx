@@ -5,6 +5,15 @@ import {
   Loader2, AlertCircle,
 } from 'lucide-react';
 
+function StatusIcon({ state }) {
+  switch (state) {
+    case 'fetching': return <Loader2 className="w-4 h-4 animate-spin" />;
+    case 'done': return <CheckCheck className="w-4 h-4" />;
+    case 'error': return <AlertCircle className="w-4 h-4" />;
+    default: return <Download className="w-4 h-4" />;
+  }
+}
+
 export default function FloatingBar({ selectedFiles, onClearSelection }) {
   const [dlState, setDlState] = React.useState('idle'); // 'idle' | 'fetching' | 'done' | 'error'
   const [progress, setProgress] = React.useState(0);   // 0-100
@@ -13,7 +22,7 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
   const count = selectedFiles.length;
 
   const handleDownload = async () => {
-    if (dlState !== 'idle' || count === 0) return;
+    if ((dlState !== 'idle' && dlState !== 'error') || count === 0) return;
 
     setDlState('fetching');
     setProgress(0);
@@ -61,12 +70,16 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-          } catch (fallbackErr) {
+          } catch {
             errors.push(file.name);
           }
         }
 
         setProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
+      }
+
+      if (errors.length > 0) {
+        throw new Error(`Failed to download ${errors.length} file(s).`);
       }
 
       setDlState('done');
@@ -87,15 +100,6 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
       case 'done': return 'Downloaded!';
       case 'error': return 'Failed — Retry?';
       default: return `Download ${count} file${count !== 1 ? 's' : ''} (High-Res)`;
-    }
-  };
-
-  const ButtonIcon = () => {
-    switch (dlState) {
-      case 'fetching': return <Loader2 className="w-4 h-4 animate-spin" />;
-      case 'done': return <CheckCheck className="w-4 h-4" />;
-      case 'error': return <AlertCircle className="w-4 h-4" />;
-      default: return <Download className="w-4 h-4" />;
     }
   };
 
@@ -170,7 +174,7 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
               }
             `}
           >
-            <ButtonIcon />
+            <StatusIcon state={dlState} />
             <span>{buttonLabel()}</span>
           </button>
 
