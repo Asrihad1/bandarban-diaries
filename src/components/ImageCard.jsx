@@ -44,7 +44,7 @@ export default function ImageCard({ image, index, onImageClick }) {
       {/* Main Image */}
       <img
         src={currentSrc}
-        alt={image.name || `Bandarban Memory #${index + 1}`}
+        alt={image.name || `Travel Diaries Memory #${index + 1}`}
         loading="lazy"
         onLoad={() => setIsLoaded(true)}
         onError={handleImageError}

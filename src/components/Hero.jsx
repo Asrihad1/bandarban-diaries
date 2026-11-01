@@ -6,7 +6,7 @@ const WAYPOINTS = [
   'Cumilla', 'Chakaria', 'Alikadam', 'Alir Guha', 'Dim Pahar', 'Toma Tungi', 'Thanchi',
 ];
 
-export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Bandarban' }) {
+export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Travel' }) {
   const isBandarban = districtName === 'Bandarban';
 
   return (
@@ -27,7 +27,7 @@ export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Ba
         className="relative z-10 flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/30 bg-slate-900/60 backdrop-blur-md text-emerald-400 text-xs font-medium tracking-wider uppercase"
       >
         <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '16s' }} />
-        {districtName} Expedition · Bangladesh
+        The Travel Diaries · {districtName} Expedition
       </motion.div>
 
       {/* Hero copy */}
@@ -38,9 +38,9 @@ export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Ba
           transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white leading-[1.05]"
         >
-          {isBandarban ? 'Into the Hills:' : 'Discovering Bangladesh:'}<br />
+          The Travel Diaries:<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500">
-            The {districtName} Diaries
+            {districtName} Chapter
           </span>
         </motion.h1>
 
@@ -50,18 +50,8 @@ export default function Hero({ totalMedia, onScrollToGallery, districtName = 'Ba
           transition={{ duration: 0.8, delay: 0.45 }}
           className="mt-6 text-lg sm:text-2xl text-slate-300 font-light tracking-wide max-w-2xl"
         >
-          {isBandarban ? (
-            <>
-              <span className="text-emerald-400 font-medium">9 Friends.</span>{' '}
-              <span className="text-emerald-400 font-medium">{totalMedia || 437} Memories.</span>{' '}
-              One Epic Adventure.
-            </>
-          ) : (
-            <>
-              <span className="text-emerald-400 font-medium">{totalMedia || 0} Memories.</span>{' '}
-              Exploration of {districtName}.
-            </>
-          )}
+          <span className="text-emerald-400 font-medium">{totalMedia || 0} Memories.</span>{' '}
+          Exploring {districtName} · 64 Districts Challenge.
         </motion.p>
 
         {/* Route waypoints */}

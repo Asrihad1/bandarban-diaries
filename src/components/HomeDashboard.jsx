@@ -434,7 +434,7 @@ export default function HomeDashboard({ unlockedDistricts, media = [], onSelectD
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
         <p className="mt-16 text-center text-xs text-slate-700">
-          Into the Hills: The Bandarban Diaries · Bangladesh 2026
+          The Travel Diaries · Bangladesh 2026
         </p>
       </div>
 

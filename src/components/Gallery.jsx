@@ -47,7 +47,7 @@ export default function Gallery({
   onSelectAll,
   onClearSelection,
   onBack,
-  districtName = 'Bandarban',
+  districtName = 'Travel Diaries',
   apiKey, // Google Drive API key of the account that owns this district's folder
 }) {
   const [search, setSearch] = useState('');

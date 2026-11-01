@@ -256,7 +256,11 @@ export default function App() {
         onBack={handleBackToHome}
       />
 
-      <Footer onScrollToTop={scrollToTop} />
+      <Footer
+        onScrollToTop={scrollToTop}
+        districtName={activeDistrict}
+        folderId={activeFolderId}
+      />
 
       {/* Floating action bar — appears when ≥1 file is selected */}
       <FloatingBar
