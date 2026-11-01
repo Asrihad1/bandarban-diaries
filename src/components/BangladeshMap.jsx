@@ -688,7 +688,7 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
                               {selectedDistrict}
                             </h4>
                             <p className="text-xs text-slate-400 truncate">
-                              {isSelectedUnlocked ? '437 memories' : 'Locked Expedition'}
+                              {isSelectedUnlocked ? 'Official Expedition' : 'Locked Expedition'}
                             </p>
                           </div>
                         </div>
