@@ -621,10 +621,10 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
                   </svg>
                 </TransformComponent>
 
-                {/* Floating Zoom In / Zoom Out / Reset Controls */}
+                {/* Floating Zoom In / Zoom Out / Reset Controls (Bottom-Left) */}
                 <div
-                  className={`absolute right-3 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-xl transition-all duration-300 ${
-                    selectedDistrict ? 'bottom-28 sm:bottom-24' : 'bottom-3'
+                  className={`absolute left-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-xl transition-all duration-300 ${
+                    selectedDistrict ? 'bottom-28 sm:bottom-24' : 'bottom-4'
                   }`}
                 >
                   <button
