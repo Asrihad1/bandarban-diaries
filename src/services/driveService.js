@@ -4,8 +4,12 @@
  * Implements a nextPageToken while-loop to guarantee all files are loaded.
  */
 
-const API_KEY  = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
+const ENV_API_KEY = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/drive/v3/files';
+
+/** Direct original-quality media URL, authenticated with a specific account's API key */
+export const altMediaUrl = (id, apiKey) =>
+  `${BASE_URL}/${id}?alt=media&key=${encodeURIComponent(apiKey)}`;
 
 // ─── URL helpers ─────────────────────────────────────────────────────────────
 
@@ -46,18 +50,55 @@ export const isImage = (mimeType = '') => mimeType.startsWith('image/');
 // ─── Pagination fetch ─────────────────────────────────────────────────────────
 
 /**
+ * Quick pre-flight check that a folder is readable with the given API key.
+ * Used by the Unlock modal so bad credentials are caught before saving.
+ * @returns {Promise<void>} Resolves on success, throws a user-friendly Error otherwise
+ */
+export async function verifyDriveAccess(folderId, apiKey) {
+  const url = new URL(BASE_URL);
+  url.searchParams.set('q', `'${folderId}' in parents and trashed = false`);
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('pageSize', '1');
+  url.searchParams.set('fields', 'files(id)');
+
+  let response;
+  try {
+    response = await fetch(url.toString());
+  } catch {
+    throw new Error('Network error — could not reach Google Drive.');
+  }
+  if (response.ok) return;
+
+  const err = await response.json().catch(() => ({}));
+  const reason = err?.error?.errors?.[0]?.reason;
+  const message = err?.error?.message ?? `HTTP ${response.status}`;
+  if (reason === 'keyInvalid' || /API key not valid/i.test(message)) {
+    throw new Error('That API key is not valid. Check it in Google Cloud Console.');
+  }
+  if (reason === 'accessNotConfigured' || /has not been used|is disabled/i.test(message)) {
+    throw new Error('Google Drive API is not enabled for this API key\'s project.');
+  }
+  if (response.status === 404) {
+    throw new Error('Folder not found. Make sure it is shared as "Anyone with the link".');
+  }
+  throw new Error(message);
+}
+
+/**
  * Fetches ALL files from the Drive folder using a while-loop over nextPageToken.
  * @param {(count: number) => void} [onProgress] - Live progress callback
  * @param {string} [folderId] - Override folder ID (falls back to env var)
+ * @param {string} [apiKey] - Google Drive API key for the account owning the folder (falls back to env var)
  * @param {AbortSignal} [signal] - Optional AbortSignal to cancel in-flight requests
  * @returns {Promise<Array>} Unified array of all mapped media files
  */
-export async function fetchAllDriveMedia(onProgress, folderId, signal) {
+export async function fetchAllDriveMedia(onProgress, folderId, apiKey, signal) {
   const targetFolder = (folderId || import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '').trim();
+  const key = (apiKey || ENV_API_KEY || '').trim();
 
-  if (!targetFolder || !API_KEY) {
+  if (!targetFolder || !key) {
     throw new Error(
-      'Missing Google Drive Folder ID or VITE_GOOGLE_DRIVE_API_KEY in your .env file.'
+      'Missing Google Drive Folder ID or API key for this district.'
     );
   }
 
@@ -76,7 +117,7 @@ export async function fetchAllDriveMedia(onProgress, folderId, signal) {
 
     const url = new URL(BASE_URL);
     url.searchParams.set('q',         `'${safeFolderId}' in parents and trashed = false`);
-    url.searchParams.set('key',        API_KEY);
+    url.searchParams.set('key',        key);
     url.searchParams.set('pageSize',  '100');
     url.searchParams.set(
       'fields',
@@ -104,7 +145,7 @@ export async function fetchAllDriveMedia(onProgress, folderId, signal) {
       const imgSrc = file.thumbnailLink
         ? getOptimizedThumbnail(file.thumbnailLink, 600)
         : imageFile
-          ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`
+          ? altMediaUrl(file.id, key)
           : `https://drive.google.com/thumbnail?id=${file.id}&sz=w600`;
 
       const lightboxThumb = file.thumbnailLink
@@ -124,10 +165,13 @@ export async function fetchAllDriveMedia(onProgress, folderId, signal) {
         videoMetadata: file.videoMediaMetadata ?? null,
         imgSrc:        imgSrc,
         thumbnailLink: imgSrc,
+        // Untouched Drive thumbnail (usually ends in `=s220`) for callers that resize it themselves
+        rawThumbnailLink: file.thumbnailLink ?? null,
         // Resolved URLs
         viewUrl:       imageFile ? viewUrl(file.id)    : null,
         previewUrl:    videoFile ? previewUrl(file.id) : null,
-        streamUrl:     `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`,
+        // Original-quality URL bound to THIS district's API key (used by downloads & fallbacks)
+        streamUrl:     altMediaUrl(file.id, key),
         downloadUrl:   downloadUrl(file.id),
         lhPreview:     lightboxThumb,
         isVideo:       videoFile,

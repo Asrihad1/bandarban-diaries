@@ -42,20 +42,17 @@ function SelectionCheckbox({ isSelected, onToggle }) {
 // ─── Photo Card ───────────────────────────────────────────────────────────────
 
 function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
-  const primarySrc =
-    file.imgSrc ||
-    file.thumbnailLink ||
-    (file.id ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}` : file.viewUrl);
+  // `streamUrl` is built by driveService with the API key of the account owning this file
+  const directAltUrl = file.streamUrl;
+  const primarySrc = file.imgSrc || file.thumbnailLink || directAltUrl || file.viewUrl;
 
   const [useFallback, setUseFallback] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const directAltUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
   const currentSrc = useFallback ? directAltUrl : primarySrc;
 
   const handleError = useCallback(() => {
-    if (!useFallback && primarySrc !== directAltUrl) {
+    if (!useFallback && directAltUrl && primarySrc !== directAltUrl) {
       setUseFallback(true);
     } else {
       setHasError(true);

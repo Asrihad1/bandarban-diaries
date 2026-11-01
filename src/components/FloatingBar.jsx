@@ -4,6 +4,7 @@ import {
   Download, X, CheckCheck,
   Loader2, AlertCircle,
 } from 'lucide-react';
+import { altMediaUrl } from '../services/driveService';
 
 function StatusIcon({ state }) {
   switch (state) {
@@ -14,7 +15,7 @@ function StatusIcon({ state }) {
   }
 }
 
-export default function FloatingBar({ selectedFiles, onClearSelection }) {
+export default function FloatingBar({ selectedFiles, apiKey, onClearSelection }) {
   const [dlState, setDlState] = React.useState('idle'); // 'idle' | 'fetching' | 'done' | 'error'
   const [progress, setProgress] = React.useState(0);   // 0-100
   const [errorMsg, setErrorMsg] = React.useState('');
@@ -28,7 +29,6 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
     setProgress(0);
     setErrorMsg('');
 
-    const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
     const errors = [];
 
     try {
@@ -39,8 +39,10 @@ export default function FloatingBar({ selectedFiles, onClearSelection }) {
           /**
            * Use the official Drive API v3 `alt=media` endpoint to fetch the
            * raw file blob directly — no zip, no proxy, no redirect chain.
+           * `file.streamUrl` is already bound to the API key of the account
+           * that owns this district's folder.
            */
-          const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+          const apiUrl = file.streamUrl || altMediaUrl(file.id, apiKey);
           const response = await fetch(apiUrl);
           if (!response.ok) throw new Error(`Failed to fetch file ${file.id}`);
           const blob = await response.blob();

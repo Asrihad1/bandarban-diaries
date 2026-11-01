@@ -3,6 +3,7 @@ import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import MediaCard from './MediaCard';
+import { altMediaUrl } from '../services/driveService';
 import {
   Search, SlidersHorizontal, Image as ImageIcon, Video,
   Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft, Download,
@@ -47,13 +48,12 @@ export default function Gallery({
   onClearSelection,
   onBack,
   districtName = 'Bandarban',
+  apiKey, // Google Drive API key of the account that owns this district's folder
 }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setType] = useState('all'); // 'all' | 'photos' | 'videos'
   const [sortBy, setSort] = useState('default');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
-
-  const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
   const photoCount = useMemo(() => media.filter((m) => m.isImage).length, [media]);
   const videoCount = useMemo(() => media.filter((m) => m.isVideo).length, [media]);
@@ -83,7 +83,7 @@ export default function Gallery({
   const slides = useMemo(() => {
     return filtered.map((file) => {
       const isVideoFile = file.isVideo || (file.mimeType && file.mimeType.includes('video'));
-      const highResUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+      const highResUrl = altMediaUrl(file.id, apiKey);
 
       if (isVideoFile) {
         return {
@@ -109,7 +109,7 @@ export default function Gallery({
     if (!slide || !slide.file) return;
     const file = slide.file;
     try {
-      const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+      const apiUrl = altMediaUrl(file.id, apiKey);
       const response = await fetch(apiUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
