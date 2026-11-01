@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { MapPin, Lock, Unlock, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import {
+  MapPin, Lock, Unlock, ZoomIn, ZoomOut, RotateCcw,
+  Trophy, ChevronRight, X,
+} from 'lucide-react';
 
 // ── Accurate 64 Districts of Bangladesh SVG Geometry (viewBox: 0 0 600 820) ──
 const DISTRICT_PATHS = [
@@ -456,14 +460,21 @@ const DISTRICT_PATHS = [
 
 export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick }) {
   const [hoveredDistrict, setHoveredDistrict] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
 
-  // Render locked paths first and unlocked paths on top so emerald drop-shadows are never clipped
+  // Render locked paths first, unlocked paths second, and the selected path on top
+  // so its white highlight border & glow are never clipped by adjacent paths
   const sortedDistricts = [
-    ...DISTRICT_PATHS.filter((d) => !unlockedDistricts[d.name]),
-    ...DISTRICT_PATHS.filter((d) => Boolean(unlockedDistricts[d.name])),
+    ...DISTRICT_PATHS.filter((d) => !unlockedDistricts[d.name] && d.name !== selectedDistrict),
+    ...DISTRICT_PATHS.filter((d) => Boolean(unlockedDistricts[d.name]) && d.name !== selectedDistrict),
+    ...DISTRICT_PATHS.filter((d) => d.name === selectedDistrict),
   ];
 
-  const isHoveredUnlocked = hoveredDistrict ? Boolean(unlockedDistricts[hoveredDistrict.name]) : false;
+  const activeBannerDistrict =
+    hoveredDistrict ||
+    (selectedDistrict ? DISTRICT_PATHS.find((d) => d.name === selectedDistrict) : null);
+  const isBannerUnlocked = activeBannerDistrict ? Boolean(unlockedDistricts[activeBannerDistrict.name]) : false;
+  const isSelectedUnlocked = selectedDistrict ? Boolean(unlockedDistricts[selectedDistrict]) : false;
 
   return (
     <div className="relative w-full max-w-3xl mx-auto flex flex-col items-center">
@@ -471,42 +482,42 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
         {/* Ambient emerald map glow */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_55%,rgba(16,185,129,0.08),transparent_70%)]" />
 
-        {/* Top Bar: Legend & Live Hover Pill */}
+        {/* Top Bar: Legend & Live Hover / Selection Pill */}
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800/80">
           <div className="flex items-center gap-4 text-xs">
             <span className="inline-flex items-center gap-2 text-emerald-400 font-medium">
               <span className="w-3 h-3 rounded-sm bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-              Unlocked (Click for Gallery)
+              Unlocked
             </span>
             <span className="inline-flex items-center gap-2 text-slate-400 font-medium">
               <span className="w-3 h-3 rounded-sm bg-slate-800 border border-slate-600" />
-              Locked (Click to Unlock)
+              Locked
             </span>
           </div>
 
           <div className="h-7 flex items-center">
-            {hoveredDistrict ? (
+            {activeBannerDistrict ? (
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  isHoveredUnlocked
+                  isBannerUnlocked
                     ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                     : 'bg-slate-800/90 border-slate-700 text-slate-300'
                 }`}
               >
-                {isHoveredUnlocked ? (
+                {isBannerUnlocked ? (
                   <Unlock className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
                   <Lock className="w-3.5 h-3.5 text-slate-400" />
                 )}
-                <span>{hoveredDistrict.name}</span>
+                <span>{activeBannerDistrict.name}</span>
                 <span className="text-[10px] text-slate-400 font-normal">
-                  · {isHoveredUnlocked ? 'Open Gallery' : 'Click to Unlock'}
+                  · {isBannerUnlocked ? 'Unlocked' : 'Locked'}
                 </span>
               </div>
             ) : (
               <span className="text-xs text-slate-500 inline-flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-emerald-500/70" />
-                Hover or tap any district on the map
+                Tap any district on the map to select
               </span>
             )}
           </div>
@@ -537,45 +548,66 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
                     <g>
                       {sortedDistricts.map((district) => {
                         const isUnlocked = Boolean(unlockedDistricts[district.name]);
+                        const isSelected = district.name === selectedDistrict;
+
+                        let pathClass;
+                        if (isSelected) {
+                          pathClass = isUnlocked
+                            ? 'fill-emerald-400 stroke-white stroke-[2] drop-shadow-[0_0_14px_rgba(16,185,129,0.95)] cursor-pointer transition-all duration-200'
+                            : 'fill-slate-600/90 stroke-white stroke-[2] drop-shadow-[0_0_12px_rgba(255,255,255,0.45)] cursor-pointer transition-all duration-200';
+                        } else if (isUnlocked) {
+                          pathClass =
+                            'fill-emerald-500/80 hover:fill-emerald-400 stroke-emerald-300/80 stroke-[0.8] drop-shadow-[0_0_8px_rgba(16,185,129,0.6)] cursor-pointer transition-all duration-200';
+                        } else {
+                          pathClass =
+                            'fill-slate-800/50 hover:fill-slate-700 stroke-slate-700 stroke-[0.5] cursor-pointer transition-all duration-200';
+                        }
+
                         return (
                           <path
                             key={district.name}
                             d={district.d}
                             onMouseEnter={() => setHoveredDistrict(district)}
                             onMouseLeave={() => setHoveredDistrict(null)}
-                            onClick={() => onDistrictClick(district.name)}
-                            className={
-                              isUnlocked
-                                ? 'fill-emerald-500/80 hover:fill-emerald-400 stroke-emerald-300/80 stroke-[0.8] drop-shadow-[0_0_8px_rgba(16,185,129,0.6)] cursor-pointer transition-all duration-200'
-                                : 'fill-slate-800/50 hover:fill-slate-700 stroke-slate-700 stroke-[0.5] cursor-pointer transition-all duration-200'
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDistrict(district.name);
+                            }}
+                            className={pathClass}
                           >
                             <title>
-                              {`${district.name} (${isUnlocked ? 'Unlocked — Click to open gallery' : 'Locked — Click to unlock'})`}
+                              {`${district.name} (${isUnlocked ? 'Unlocked' : 'Locked'} — Tap to select)`}
                             </title>
                           </path>
                         );
                       })}
                     </g>
 
-                    {/* District Labels for Unlocked Districts & Currently Hovered District */}
+                    {/* District Labels for Unlocked, Hovered, or Selected District */}
                     <g className="pointer-events-none">
                       {DISTRICT_PATHS.map((district) => {
                         const isUnlocked = Boolean(unlockedDistricts[district.name]);
                         const isHovered = hoveredDistrict?.name === district.name;
-                        if (!isUnlocked && !isHovered) return null;
+                        const isSelected = selectedDistrict === district.name;
+                        if (!isUnlocked && !isHovered && !isSelected) return null;
 
                         return (
                           <g key={`label-${district.name}`} transform={`translate(${district.cx}, ${district.cy})`}>
                             <circle
-                              r={isUnlocked ? 3 : 2.5}
-                              className={isUnlocked ? 'fill-white stroke-emerald-950 stroke-1' : 'fill-emerald-400'}
+                              r={isSelected ? 4 : isUnlocked ? 3 : 2.5}
+                              className={
+                                isSelected
+                                  ? 'fill-white stroke-emerald-500 stroke-2'
+                                  : isUnlocked
+                                    ? 'fill-white stroke-emerald-950 stroke-1'
+                                    : 'fill-emerald-400'
+                              }
                             />
                             <text
-                              y={-7}
+                              y={-8}
                               textAnchor="middle"
                               className={`text-[10px] font-bold tracking-wide select-none ${
-                                isUnlocked
+                                isSelected || isUnlocked
                                   ? 'fill-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]'
                                   : 'fill-emerald-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]'
                               }`}
@@ -590,7 +622,11 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
                 </TransformComponent>
 
                 {/* Floating Zoom In / Zoom Out / Reset Controls */}
-                <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-xl">
+                <div
+                  className={`absolute right-3 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-xl transition-all duration-300 ${
+                    selectedDistrict ? 'bottom-28 sm:bottom-24' : 'bottom-3'
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => zoomIn()}
@@ -619,6 +655,84 @@ export default function BangladeshMap({ unlockedDistricts = {}, onDistrictClick 
                     <RotateCcw className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Selected District Action Card (Overlay at bottom of map container) */}
+                <AnimatePresence>
+                  {selectedDistrict && (
+                    <motion.div
+                      key={selectedDistrict}
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 20, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeOut' }}
+                      className="absolute inset-x-3 bottom-3 z-30 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 shadow-2xl shadow-slate-950/90 p-4 sm:px-5 sm:py-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Left: Icon + District Name + Subtitle */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                              isSelectedUnlocked
+                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                                : 'bg-slate-800 border-slate-700 text-slate-400'
+                            }`}
+                          >
+                            {isSelectedUnlocked ? (
+                              <Trophy className="w-5 h-5 text-emerald-400" />
+                            ) : (
+                              <Lock className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base sm:text-lg font-bold text-white truncate">
+                              {selectedDistrict}
+                            </h4>
+                            <p className="text-xs text-slate-400 truncate">
+                              {isSelectedUnlocked ? '437 memories' : 'Locked Expedition'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: Primary Action Button + Close (X) Button */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isSelectedUnlocked ? (
+                            <button
+                              type="button"
+                              onClick={() => onDistrictClick(selectedDistrict)}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs sm:text-sm font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                            >
+                              <span>Go to Gallery</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const target = selectedDistrict;
+                                setSelectedDistrict(null);
+                                onDistrictClick(target);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                            >
+                              <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Unlock District</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDistrict(null)}
+                            aria-label="Close district card"
+                            title="Close"
+                            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </>
             )}
           </TransformWrapper>
