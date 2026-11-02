@@ -10,13 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@tailwindcss/vite": "^4.3.3",
     "firebase": "^13.1.0",
     "framer-motion": "^14.9.0",
+    "gsap": "^3.15.0",
+    "howler": "^2.2.4",
+    "lottie-react": "^3.1.2",
     "lucide-react": "^1.66.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-zoom-pan-pinch": "^4.2.0",
+    "use-sound": "^5.0.0",
     "yet-another-react-lightbox": "^3.33.0"
   },
   "devDependencies": {

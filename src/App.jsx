@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from './services/firebase';
+import { useSound } from './services/soundEngine';
 import HomeDashboard from './components/HomeDashboard';
 import Hero from './components/Hero';
 import JourneyBanner from './components/JourneyBanner';
@@ -37,11 +38,42 @@ export default function App() {
     Bandarban: BANDARBAN_DISTRICT,
   });
 
-  // ── View routing ─────────────────────────────────────────────────────────────
+  // ── View routing & Global Spatial Audio State ───────────────────────────────
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'gallery'
+  const [isReturningFromGallery, setIsReturningFromGallery] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
   const [activeDistrict, setActiveDistrict] = useState('Bandarban');
   const [activeFolderId, setActiveFolderId] = useState(DEFAULT_FOLDER_ID);
   const [activeApiKey, setActiveApiKey] = useState(DEFAULT_API_KEY);
+
+  // ── Ambient Nature Background Loop (volume: 0.15) ───────────────────────────
+  const [playNatureLoop, { stop: stopNatureLoop }] = useSound('/sounds/nature-loop.mp3', {
+    volume: 0.15,
+    loop: true,
+    soundEnabled: isSoundEnabled,
+  });
+  const [playPop] = useSound('/sounds/pop.mp3', {
+    volume: 0.35,
+    soundEnabled: true,
+  });
+
+  useEffect(() => {
+    if (isSoundEnabled) {
+      playNatureLoop();
+    } else {
+      stopNatureLoop();
+    }
+  }, [isSoundEnabled, playNatureLoop, stopNatureLoop]);
+
+  const handleToggleSound = useCallback(() => {
+    setIsSoundEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        playPop();
+      }
+      return next;
+    });
+  }, [playPop]);
 
   // ── Media state ─────────────────────────────────────────────────────────────
   const [media, setMedia] = useState([]);
@@ -152,6 +184,7 @@ export default function App() {
       abortControllerRef.current.abort();
     }
     pendingSourceRef.current = null;
+    setIsReturningFromGallery(true);
     setCurrentView('home');
     setSelectedFiles([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -204,23 +237,25 @@ export default function App() {
         unlockedDistricts={unlockedDistricts}
         onSelectDistrict={handleSelectDistrict}
         onUnlockDistrict={handleUnlockDistrict}
+        isReturningFromGallery={isReturningFromGallery}
+        onReturnComplete={() => setIsReturningFromGallery(false)}
+        isSoundEnabled={isSoundEnabled}
+        onToggleSound={handleToggleSound}
       />
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white selection:bg-cyan-500 selection:text-black overflow-x-hidden">
-      {/* Fixed Cinematic Landscape Background & OLED Aurora Glow */}
+    <div className="relative min-h-screen bg-slate-900 text-slate-50 selection:bg-emerald-500 selection:text-slate-950 overflow-x-hidden">
+      {/* Dark Nature Background & Heavy Slate Overlay */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=2000"
+          src="https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&q=80&w=2000"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-black/40 via-black/80 to-black pointer-events-none" />
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-900/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-slate-900/85 backdrop-blur-[2px]" />
       </div>
 
       <Hero
@@ -244,6 +279,7 @@ export default function App() {
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
         onBack={handleBackToHome}
+        isSoundEnabled={isSoundEnabled}
       />
 
       <Footer

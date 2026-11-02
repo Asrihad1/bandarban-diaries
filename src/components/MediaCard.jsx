@@ -23,10 +23,10 @@ function SelectionCheckbox({ isSelected, onToggle }) {
         aria-label={isSelected ? 'Deselect file' : 'Select file'}
         className={`
           flex items-center justify-center w-7 h-7 rounded-md border-2 shadow-md backdrop-blur-md
-          transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer
+          transition-all duration-200 ease-out hover:scale-110 active:scale-90 cursor-pointer
           ${isSelected
-            ? 'bg-cyan-500 border-cyan-400 text-black'
-            : 'bg-black/70 border-white/20 text-gray-300 hover:border-cyan-400'
+            ? 'bg-emerald-500 border-emerald-400 text-slate-950'
+            : 'bg-slate-900/75 border-slate-600 text-slate-300 hover:border-emerald-400'
           }
         `}
       >
@@ -62,11 +62,11 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
   return (
     <div
       className={`
-        relative group overflow-hidden rounded-2xl cursor-pointer bg-white/5 backdrop-blur-xl
-        border transition-all duration-300 shadow-[0_4px_30px_rgba(0,0,0,0.5)]
+        relative group overflow-hidden rounded-2xl cursor-pointer bg-slate-800/40 backdrop-blur-xl
+        border transition-all duration-200 ease-out shadow-xl
         ${isSelected
-          ? 'border-cyan-500 shadow-cyan-500/30 shadow-xl'
-          : 'border-white/10 hover:border-cyan-500/40'
+          ? 'border-emerald-500 shadow-emerald-900/40'
+          : 'border-slate-700/50 hover:border-emerald-500/40'
         }
       `}
     >
@@ -75,7 +75,7 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
       {hasError ? (
         <div
           onClick={onOpenLightbox}
-          className="w-full h-48 sm:h-56 bg-white/5 flex flex-col items-center justify-center p-3 text-gray-500 text-center"
+          className="w-full h-48 sm:h-56 bg-slate-800/40 flex flex-col items-center justify-center p-3 text-slate-400 text-center"
         >
           <Camera className="w-8 h-8 mb-1.5 opacity-60" />
           <p className="text-[11px] truncate max-w-full px-2">{file.name}</p>
@@ -89,7 +89,7 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
           referrerPolicy="no-referrer"
           onError={handleError}
           onClick={onOpenLightbox}
-          className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-300 ease-out group-hover:scale-105"
         />
       )}
 
@@ -97,21 +97,21 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
       <div
         onClick={onOpenLightbox}
         className="
-          absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent
-          opacity-0 group-hover:opacity-100 transition-opacity duration-300
+          absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent
+          opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out
           flex items-end justify-between p-3 pointer-events-none group-hover:pointer-events-auto
         "
       >
         <div className="flex flex-col gap-0.5">
-          <p className="text-[11px] font-medium text-white truncate max-w-[160px]">
+          <p className="text-[11px] font-medium text-slate-50 truncate max-w-[160px]">
             {file.name}
           </p>
           {file.size && (
-            <p className="text-[10px] text-gray-400">{file.size}</p>
+            <p className="text-[10px] text-slate-400">{file.size}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/15 text-gray-200">
+          <div className="p-1.5 rounded-lg bg-slate-800/60 backdrop-blur-md border border-slate-700/60 text-slate-200">
             <Maximize2 className="w-3.5 h-3.5" />
           </div>
           <a
@@ -120,7 +120,7 @@ function PhotoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/30"
+            className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-200 ease-out shadow-lg shadow-emerald-900/50"
             title="Download Original"
           >
             <Download className="w-3.5 h-3.5" />
@@ -158,25 +158,25 @@ function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
   return (
     <div
       className={`
-        relative group overflow-hidden rounded-2xl bg-white/5 backdrop-blur-xl
-        border transition-all duration-300 shadow-[0_4px_30px_rgba(0,0,0,0.5)] cursor-pointer
+        relative group overflow-hidden rounded-2xl bg-slate-800/40 backdrop-blur-xl
+        border transition-all duration-200 ease-out shadow-xl cursor-pointer
         ${isSelected
-          ? 'border-cyan-500 shadow-cyan-500/30 shadow-xl'
-          : 'border-white/10 hover:border-cyan-500/40'
+          ? 'border-emerald-500 shadow-emerald-900/40'
+          : 'border-slate-700/50 hover:border-emerald-500/40'
         }
       `}
     >
       <SelectionCheckbox isSelected={isSelected} onToggle={onToggleSelect} />
 
       {/* Video badge */}
-      <div className="absolute top-2 right-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 border border-white/15 text-cyan-400 text-[10px] font-semibold backdrop-blur-sm pointer-events-none">
-        <Play className="w-2.5 h-2.5 fill-cyan-400" />
+      <div className="absolute top-2 right-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900/80 border border-slate-700/60 text-emerald-400 text-[10px] font-semibold backdrop-blur-sm pointer-events-none">
+        <Play className="w-2.5 h-2.5 fill-emerald-400" />
         <span>VIDEO</span>
       </div>
 
       <div
         onClick={onOpenLightbox}
-        className="relative w-full h-48 sm:h-56 bg-black z-10 overflow-hidden cursor-pointer group/video"
+        className="relative w-full h-48 sm:h-56 bg-slate-950 z-10 overflow-hidden cursor-pointer group/video"
       >
         {currentSrc && !thumbFailed ? (
           <img
@@ -186,29 +186,29 @@ function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
             decoding="async"
             referrerPolicy="no-referrer"
             onError={handleThumbError}
-            className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-500 group-hover/video:scale-105"
+            className="w-full h-48 sm:h-56 object-cover rounded-lg transition-transform duration-300 ease-out group-hover/video:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-white/5">
-            <Play className="w-8 h-8 text-gray-600" />
+          <div className="w-full h-full flex items-center justify-center bg-slate-800/40">
+            <Play className="w-8 h-8 text-slate-500" />
           </div>
         )}
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover/video:bg-black/20 transition-colors">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/30 transition-transform duration-200 group-hover/video:scale-110">
+        <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center group-hover/video:bg-slate-950/20 transition-colors duration-200">
+          <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-900/50 transition-transform duration-200 ease-out group-hover/video:scale-110">
             <Play className="w-5 h-5 fill-current ml-0.5" />
           </div>
         </div>
       </div>
 
       {/* Footer bar with file info */}
-      <div className="flex items-center justify-between px-3 py-2 bg-black/60 border-t border-white/10">
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/60 border-t border-slate-700/50">
         <div className="flex items-center gap-1.5 min-w-0" onClick={onOpenLightbox}>
-          <Play className="w-3 h-3 text-cyan-400 flex-shrink-0" />
-          <p className="text-[10px] text-gray-300 truncate">{file.name}</p>
+          <Play className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+          <p className="text-[10px] text-slate-300 truncate">{file.name}</p>
         </div>
         <div className="flex items-center gap-2">
           {file.size && (
-            <p className="text-[10px] text-gray-400 flex-shrink-0">{file.size}</p>
+            <p className="text-[10px] text-slate-400 flex-shrink-0">{file.size}</p>
           )}
           <a
             href={file.downloadUrl}
@@ -216,7 +216,7 @@ function VideoCard({ file, isSelected, onToggleSelect, onOpenLightbox }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="p-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all shadow-sm"
+            className="p-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-500 transition-all duration-200 ease-out shadow-sm"
             title="Download Original"
           >
             <Download className="w-3 h-3" />
