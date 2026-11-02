@@ -28,15 +28,15 @@ export const downloadUrl = (id) =>
 /**
  * Optimized Google Drive thumbnail helper.
  * Google Drive default thumbnails end in `=s220`.
- * Replacing `=s220` (or any `=s\d+` / `=w\d+`) with `=w${width}` provides
+ * Replacing `=s220` (or any `=s\d+` / `=w\d+`) with `=s${width}` provides
  * crisp, lightweight image previews without fetching multi-megabyte originals.
  */
 export const getOptimizedThumbnail = (thumbnailLink, width = 600) => {
   if (!thumbnailLink) return null;
   if (/=[sw]\d+/.test(thumbnailLink)) {
-    return thumbnailLink.replace(/=[sw]\d+.*$/, `=w${width}`);
+    return thumbnailLink.replace(/=[sw]\d+.*$/, `=s${width}`);
   }
-  return `${thumbnailLink}=w${width}`;
+  return `${thumbnailLink}=s${width}`;
 };
 
 export const lhThumbnailUrl = (thumbnailLink, width = 1200) =>

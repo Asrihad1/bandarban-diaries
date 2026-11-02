@@ -49,22 +49,22 @@ const waypoints = [
 
 export default function JourneyBanner() {
   return (
-    <section className="relative z-10 py-16 bg-slate-900/40 border-y border-slate-800/80 backdrop-blur-sm">
+    <section className="relative z-10 py-16 bg-white/5 border-y border-white/10 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto mb-12"
+          className="text-center max-w-2xl mx-auto mb-12 will-change-transform transform-gpu"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
+          <span className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
             The Route & Milestones
           </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mt-1">
             Across Karst Caves & Sky-High Passes
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+          <p className="text-xs sm:text-sm text-gray-400 mt-2">
             Tracing every checkpoint from Cumilla all the way into the remote wilderness of Thanchi.
           </p>
         </motion.div>
@@ -80,21 +80,21 @@ export default function JourneyBanner() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="group relative flex flex-col justify-between p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 hover:border-emerald-500/40 transition-all duration-300 hover:-translate-y-1"
+                className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)] hover:border-cyan-500/40 transition-all duration-300 hover:-translate-y-1 will-change-transform transform-gpu"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="p-2 rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500/10 transition-colors">
+                    <span className="p-2 rounded-xl bg-white/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
                       <Icon className="w-4 h-4" />
                     </span>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
                       0{i + 1} • {wp.tag}
                     </span>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition-colors">
+                  <h3 className="text-sm font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
                     {wp.name}
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
                     {wp.desc}
                   </p>
                 </div>

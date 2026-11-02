@@ -45,7 +45,7 @@ export default function App() {
 
   // ── Media state ─────────────────────────────────────────────────────────────
   const [media, setMedia] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // Bandarban is fetched on app load
+  const [isLoading, setIsLoading] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [error, setError] = useState(null);
 
@@ -91,33 +91,6 @@ export default function App() {
     }
   }, []);
 
-  // ── Fetch Bandarban media immediately on app load (powers the Spotlight on Home) ──
-  // State is only set inside async callbacks, so this effect purely syncs with Drive.
-  useEffect(() => {
-    const controller = new AbortController();
-    const { folderId, apiKey } = BANDARBAN_DISTRICT;
-    abortControllerRef.current = controller;
-    pendingSourceRef.current = sourceKey(folderId, apiKey);
-
-    fetchAllDriveMedia((count) => setLoadedCount(count), folderId, apiKey, controller.signal)
-      .then((files) => {
-        if (controller.signal.aborted) return;
-        setMedia(files);
-        loadedSourceRef.current = sourceKey(folderId, apiKey);
-      })
-      .catch((err) => {
-        if (err?.name === 'AbortError' || controller.signal.aborted) return;
-        setError(err.message || 'Unable to load media from Google Drive.');
-      })
-      .finally(() => {
-        if (controller.signal.aborted) return;
-        setIsLoading(false);
-        pendingSourceRef.current = null;
-      });
-
-    return () => controller.abort();
-  }, []);
-
   // ── Real-time Firestore listener for unlocked districts ──────────────────────
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -154,7 +127,9 @@ export default function App() {
 
   // ── Navigation handlers ──────────────────────────────────────────────────────
   const handleSelectDistrict = useCallback((name, district) => {
-    const { folderId, apiKey } = normalizeDistrict(district) || BANDARBAN_DISTRICT;
+    const resolved = district || unlockedDistricts[name];
+    const { folderId, apiKey } = normalizeDistrict(resolved) || BANDARBAN_DISTRICT;
+    window.history.pushState({ view: 'gallery', district: name }, '', '');
     setActiveDistrict(name);
     setActiveFolderId(folderId);
     setActiveApiKey(apiKey);
@@ -162,8 +137,7 @@ export default function App() {
     setCurrentView('gallery');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Reuse media that's already loaded (or still loading) for this folder + key —
-    // e.g. Bandarban, which is prefetched on app load for the Spotlight.
+    // Reuse media that's already loaded (or still loading) for this folder + key
     const key = sourceKey(folderId, apiKey);
     const alreadyLoaded = loadedSourceRef.current === key;
     const alreadyLoading = pendingSourceRef.current === key;
@@ -171,7 +145,7 @@ export default function App() {
 
     setMedia([]);
     loadMedia(folderId, apiKey);
-  }, [loadMedia]);
+  }, [loadMedia, unlockedDistricts]);
 
   const handleBackToHome = useCallback(() => {
     if (abortControllerRef.current) {
@@ -182,6 +156,18 @@ export default function App() {
     setSelectedFiles([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // ── Hardware back button / mobile swipe-back listener ────────────────────────
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state?.view !== 'gallery') {
+        handleBackToHome();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [handleBackToHome]);
 
   // ── Selection handlers ───────────────────────────────────────────────────────
   const handleToggleSelect = useCallback((file) => {
@@ -216,7 +202,6 @@ export default function App() {
     return (
       <HomeDashboard
         unlockedDistricts={unlockedDistricts}
-        media={media}
         onSelectDistrict={handleSelectDistrict}
         onUnlockDistrict={handleUnlockDistrict}
       />
@@ -224,7 +209,19 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
+    <div className="relative min-h-screen bg-black text-white selection:bg-cyan-500 selection:text-black overflow-x-hidden">
+      {/* Fixed Cinematic Landscape Background & OLED Aurora Glow */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=2000"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover opacity-20"
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-black/40 via-black/80 to-black pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-900/20 blur-[120px] rounded-full pointer-events-none" />
+      </div>
 
       <Hero
         districtName={activeDistrict}
