@@ -5,7 +5,6 @@ import 'yet-another-react-lightbox/styles.css';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import MediaCard from './MediaCard';
 import { altMediaUrl } from '../services/driveService';
-import { useSound } from '../services/soundEngine';
 import {
   Search, SlidersHorizontal, Image as ImageIcon, Video,
   Layers, AlertCircle, RefreshCw, CheckCheck, Square, ArrowLeft, Download,
@@ -169,10 +168,9 @@ const COMPASS_RING_LOTTIE = {
 };
 
 // ── Filter pill button ────────────────────────────────────────────────────────
-function FilterPill({ active, onClick, onMouseEnter, icon: Icon, label, count }) {
+function FilterPill({ active, onClick, icon: Icon, label, count }) {
   return (
     <button
-      onMouseEnter={onMouseEnter}
       onClick={onClick}
       className={`
         inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium
@@ -209,21 +207,11 @@ export default function Gallery({
   onBack,
   districtName = 'Travel Diaries',
   apiKey, // Google Drive API key of the account that owns this district's folder
-  isSoundEnabled = false,
 }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setType] = useState('all'); // 'all' | 'photos' | 'videos'
   const [sortBy, setSort] = useState('default');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
-
-  const [playHover] = useSound('/sounds/hover.mp3', {
-    volume: 0.25,
-    soundEnabled: isSoundEnabled,
-  });
-  const [playPop] = useSound('/sounds/pop.mp3', {
-    volume: 0.35,
-    soundEnabled: isSoundEnabled,
-  });
 
   const photoCount = useMemo(() => media.filter((m) => m.isImage).length, [media]);
   const videoCount = useMemo(() => media.filter((m) => m.isVideo).length, [media]);
@@ -330,11 +318,7 @@ export default function Gallery({
       {/* ── Back button ─────────────────────────────────────────────────────── */}
       {onBack && (
         <button
-          onMouseEnter={() => playHover()}
-          onClick={() => {
-            playPop();
-            onBack();
-          }}
+          onClick={onBack}
           className="
             mb-8 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl
             text-sm font-medium text-slate-50 drop-shadow-md
@@ -392,24 +376,21 @@ export default function Gallery({
         <div className="flex flex-wrap items-center gap-2">
           <FilterPill
             active={typeFilter === 'all'}
-            onMouseEnter={() => playHover()}
-            onClick={() => { playPop(); setType('all'); }}
+            onClick={() => setType('all')}
             icon={Layers}
             label="All Media"
             count={media.length}
           />
           <FilterPill
             active={typeFilter === 'photos'}
-            onMouseEnter={() => playHover()}
-            onClick={() => { playPop(); setType('photos'); }}
+            onClick={() => setType('photos')}
             icon={ImageIcon}
             label="Photos"
             count={photoCount}
           />
           <FilterPill
             active={typeFilter === 'videos'}
-            onMouseEnter={() => playHover()}
-            onClick={() => { playPop(); setType('videos'); }}
+            onClick={() => setType('videos')}
             icon={Video}
             label="Videos"
             count={videoCount}
@@ -417,11 +398,7 @@ export default function Gallery({
 
           {filtered.length > 0 && (
             <button
-              onMouseEnter={() => playHover()}
-              onClick={() => {
-                playPop();
-                handleToggleSelectAll();
-              }}
+              onClick={handleToggleSelectAll}
               className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl text-slate-300 hover:border-emerald-500/60 hover:text-emerald-400 transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95 cursor-pointer"
             >
               {allFilteredSelected

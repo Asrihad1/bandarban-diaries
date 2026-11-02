@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import gsap from 'gsap';
 import { AnimatePresence, motion } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import {
@@ -459,13 +460,21 @@ const DISTRICT_PATHS = [
 ];
 
 export default function BangladeshMap({
+  mapRef,
   unlockedDistricts = {},
   onDistrictClick,
-  playHover,
-  playPop,
 }) {
   const [hoveredDistrict, setHoveredDistrict] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const internalSvgRef = useRef(null);
+  const svgRef = mapRef || internalSvgRef;
+
+  // Clear any leftover GSAP inline styles on the SVG on mount
+  useEffect(() => {
+    if (svgRef.current) {
+      gsap.set(svgRef.current, { clearProps: 'all' });
+    }
+  }, [svgRef]);
 
   // Render locked paths first, unlocked paths second, and the selected path on top
   // so its white highlight border & glow are never clipped by adjacent paths
@@ -483,8 +492,7 @@ export default function BangladeshMap({
   const isSelectedUnlocked = selectedDistrict ? Boolean(unlockedDistricts[selectedDistrict]) : false;
 
   return (
-    <div className="relative w-full max-w-3xl mx-auto flex flex-col items-center">
-      <div className="relative w-full bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-xl p-6 sm:p-8 overflow-hidden">
+    <div className="bg-slate-800/30 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-4 md:p-8 w-full max-w-4xl mx-auto relative">
         {/* Top Bar: Legend & Live Hover / Selection Pill */}
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-700/50">
           <div className="flex items-center gap-4 text-xs">
@@ -527,7 +535,7 @@ export default function BangladeshMap({
         </div>
 
         {/* Interactive 64-District SVG Map with Localized Zoom & Pan */}
-        <div className="relative w-full overflow-hidden rounded-2xl bg-slate-950/60 border border-slate-700/50">
+        <div className="relative w-full rounded-2xl bg-slate-950/40 border border-slate-700/50">
           <TransformWrapper
             initialScale={1}
             minScale={1}
@@ -539,12 +547,13 @@ export default function BangladeshMap({
             {({ zoomIn, zoomOut, resetTransform }) => (
               <>
                 <TransformComponent
-                  wrapperClass="!w-full !overflow-hidden"
+                  wrapperClass="!w-full"
                   contentClass="!w-full flex items-center justify-center"
                 >
                   <svg
+                    ref={svgRef}
                     viewBox="0 0 600 820"
-                    className="w-full max-h-[680px] h-auto select-none overflow-visible"
+                    className="w-full max-h-[680px] h-auto select-none overflow-visible transform-gpu will-change-transform origin-center"
                     role="img"
                     aria-label="Interactive map of the 64 districts of Bangladesh"
                   >
@@ -556,28 +565,24 @@ export default function BangladeshMap({
                         let pathClass;
                         if (isSelected) {
                           pathClass = isUnlocked
-                            ? 'fill-emerald-400 stroke-white stroke-[2] cursor-pointer [transform-box:fill-box] origin-center transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95'
-                            : 'fill-slate-700 stroke-white stroke-[2] cursor-pointer [transform-box:fill-box] origin-center transition-transform duration-200 ease-out active:scale-95';
+                            ? 'fill-emerald-400 stroke-white stroke-[2] transition-colors duration-300 cursor-pointer'
+                            : 'fill-slate-700 stroke-white stroke-[2] transition-colors duration-300 cursor-pointer';
                         } else if (isUnlocked) {
                           pathClass =
-                            'fill-emerald-500 hover:fill-emerald-400 stroke-emerald-300/70 stroke-[0.6] cursor-pointer [transform-box:fill-box] origin-center transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95';
+                            'fill-emerald-500 hover:fill-emerald-400 stroke-emerald-600 stroke-[0.5] hover:stroke-emerald-300 transition-colors duration-300 cursor-pointer';
                         } else {
                           pathClass =
-                            'fill-slate-800 stroke-slate-700 stroke-[0.5] hover:fill-slate-700/80 cursor-pointer [transform-box:fill-box] origin-center transition-transform duration-200 ease-out active:scale-95';
+                            'fill-slate-800 stroke-slate-700 stroke-[0.5] hover:fill-slate-700 transition-colors duration-300 cursor-pointer';
                         }
 
                         return (
                           <path
                             key={district.name}
                             d={district.d}
-                            onMouseEnter={() => {
-                              setHoveredDistrict(district);
-                              playHover?.();
-                            }}
+                            onMouseEnter={() => setHoveredDistrict(district)}
                             onMouseLeave={() => setHoveredDistrict(null)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              playPop?.();
                               setSelectedDistrict(district.name);
                             }}
                             className={pathClass}
@@ -637,11 +642,7 @@ export default function BangladeshMap({
                 >
                   <button
                     type="button"
-                    onMouseEnter={() => playHover?.()}
-                    onClick={() => {
-                      playPop?.();
-                      zoomIn();
-                    }}
+                    onClick={() => zoomIn()}
                     title="Zoom In"
                     aria-label="Zoom in"
                     className="p-2 rounded-xl bg-slate-800/40 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 border border-slate-700/50 hover:border-emerald-500/40 shadow-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95 cursor-pointer"
@@ -650,11 +651,7 @@ export default function BangladeshMap({
                   </button>
                   <button
                     type="button"
-                    onMouseEnter={() => playHover?.()}
-                    onClick={() => {
-                      playPop?.();
-                      zoomOut();
-                    }}
+                    onClick={() => zoomOut()}
                     title="Zoom Out"
                     aria-label="Zoom out"
                     className="p-2 rounded-xl bg-slate-800/40 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 border border-slate-700/50 hover:border-emerald-500/40 shadow-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95 cursor-pointer"
@@ -663,11 +660,7 @@ export default function BangladeshMap({
                   </button>
                   <button
                     type="button"
-                    onMouseEnter={() => playHover?.()}
-                    onClick={() => {
-                      playPop?.();
-                      resetTransform();
-                    }}
+                    onClick={() => resetTransform()}
                     title="Reset Zoom"
                     aria-label="Reset zoom"
                     className="p-2 rounded-xl bg-slate-800/40 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 border border-slate-700/50 hover:border-emerald-500/40 shadow-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95 cursor-pointer"
@@ -720,7 +713,6 @@ export default function BangladeshMap({
                           {isSelectedUnlocked ? (
                             <button
                               type="button"
-                              onMouseEnter={() => playHover?.()}
                               onClick={() => onDistrictClick(selectedDistrict)}
                               className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-50 drop-shadow-md text-xs sm:text-sm font-bold shadow-lg shadow-emerald-900/50 transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-emerald-500/30 active:scale-95 rounded-xl cursor-pointer"
                             >
@@ -730,7 +722,6 @@ export default function BangladeshMap({
                           ) : (
                             <button
                               type="button"
-                              onMouseEnter={() => playHover?.()}
                               onClick={() => {
                                 const target = selectedDistrict;
                                 setSelectedDistrict(null);
@@ -745,11 +736,7 @@ export default function BangladeshMap({
 
                           <button
                             type="button"
-                            onMouseEnter={() => playHover?.()}
-                            onClick={() => {
-                              playPop?.();
-                              setSelectedDistrict(null);
-                            }}
+                            onClick={() => setSelectedDistrict(null)}
                             aria-label="Close district card"
                             title="Close"
                             className="p-2 rounded-xl text-slate-400 hover:text-slate-50 hover:bg-slate-700/50 border border-transparent hover:border-slate-700/50 transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-95 cursor-pointer"
@@ -765,7 +752,6 @@ export default function BangladeshMap({
             )}
           </TransformWrapper>
         </div>
-      </div>
     </div>
   );
 }

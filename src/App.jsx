@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from './services/firebase';
-import { useSound } from './services/soundEngine';
 import HomeDashboard from './components/HomeDashboard';
 import Hero from './components/Hero';
 import JourneyBanner from './components/JourneyBanner';
@@ -38,42 +37,12 @@ export default function App() {
     Bandarban: BANDARBAN_DISTRICT,
   });
 
-  // ── View routing & Global Spatial Audio State ───────────────────────────────
+  // ── View routing ─────────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'gallery'
   const [isReturningFromGallery, setIsReturningFromGallery] = useState(false);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
   const [activeDistrict, setActiveDistrict] = useState('Bandarban');
   const [activeFolderId, setActiveFolderId] = useState(DEFAULT_FOLDER_ID);
   const [activeApiKey, setActiveApiKey] = useState(DEFAULT_API_KEY);
-
-  // ── Ambient Nature Background Loop (volume: 0.15) ───────────────────────────
-  const [playNatureLoop, { stop: stopNatureLoop }] = useSound('/sounds/nature-loop.mp3', {
-    volume: 0.15,
-    loop: true,
-    soundEnabled: isSoundEnabled,
-  });
-  const [playPop] = useSound('/sounds/pop.mp3', {
-    volume: 0.35,
-    soundEnabled: true,
-  });
-
-  useEffect(() => {
-    if (isSoundEnabled) {
-      playNatureLoop();
-    } else {
-      stopNatureLoop();
-    }
-  }, [isSoundEnabled, playNatureLoop, stopNatureLoop]);
-
-  const handleToggleSound = useCallback(() => {
-    setIsSoundEnabled((prev) => {
-      const next = !prev;
-      if (next) {
-        playPop();
-      }
-      return next;
-    });
-  }, [playPop]);
 
   // ── Media state ─────────────────────────────────────────────────────────────
   const [media, setMedia] = useState([]);
@@ -239,8 +208,6 @@ export default function App() {
         onUnlockDistrict={handleUnlockDistrict}
         isReturningFromGallery={isReturningFromGallery}
         onReturnComplete={() => setIsReturningFromGallery(false)}
-        isSoundEnabled={isSoundEnabled}
-        onToggleSound={handleToggleSound}
       />
     );
   }
@@ -279,7 +246,6 @@ export default function App() {
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
         onBack={handleBackToHome}
-        isSoundEnabled={isSoundEnabled}
       />
 
       <Footer
